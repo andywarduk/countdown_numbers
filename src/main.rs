@@ -1,10 +1,13 @@
 mod programs;
 
+use std::collections::VecDeque;
 use programs::*;
 use std::path::Path;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::prelude::*;
+use std::sync::{Mutex, Arc};
+use std::thread;
 use itertools::Itertools;
 use clap::Parser;
 
@@ -13,26 +16,69 @@ use clap::Parser;
 struct Args {
     /// Output equations in results files
     #[clap(short='e', long="equations", action)]
-    output_equations: bool
+    output_equations: bool,
+
+    /// Number of threads to run
+    #[clap(short='t', long="threads", default_value_t=0, value_parser)]
+    threads: u16
 }
 
 fn main() {
     let args = Args::parse();
 
+    let cards: [u32; 24] = [100, 75, 50, 25, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1];
+
     println!("Generating programs...");
     let programs = Programs::new(6);
 
-    println!("Running...");
-    let cards: [u32; 24] = [100, 75, 50, 25, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1];
-    
-    let mut hash: HashSet<Vec<&u32>> = HashSet::new();
-    for choice in cards.iter().combinations(6) {
-        if !hash.contains(&choice) {
-            let numbers = choice.iter().map(|x| **x).collect();
-            hash.insert(choice);
-            solve(&args, &programs, &numbers);
+    println!("Generating card combinations...");    
+    let card_combs = Arc::new(Mutex::new({
+        let mut card_combs: VecDeque<Vec<u32>> = VecDeque::new();
+        let mut hash: HashSet<Vec<&u32>> = HashSet::new();
+
+        for choice in cards.iter().combinations(6) {
+            if !hash.contains(&choice) {
+                let numbers = choice.iter().map(|x| **x).collect();
+                hash.insert(choice);
+                card_combs.push_back(numbers);
+            }
         }
+
+        card_combs
+    }));
+
+    let mut threads = args.threads as usize;
+    if args.threads == 0 {
+        threads = num_cpus::get();
     }
+
+    println!("Starting {} threads...", threads);
+    thread::scope(|s| {
+        let mut handles = vec![];
+
+        for _ in 0..threads {
+            let thread_card_combs = card_combs.clone();
+            let args_ref = &args;
+            let programs_ref = &programs;
+
+            let handle = s.spawn(move || {
+                loop {
+                    let numbers_opt = thread_card_combs.lock().unwrap().pop_front();
+
+                    match numbers_opt {
+                        Some(numbers) => solve(args_ref, programs_ref, &numbers),
+                        None => break
+                    }
+                }
+            });
+
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    });
 }
 
 fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
