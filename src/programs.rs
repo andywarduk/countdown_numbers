@@ -113,7 +113,7 @@ impl Program {
     } 
 
     fn run(&self, numbers: &[u32]) -> Result<u32, ProgErr> {
-        let mut stack: Vec<u32> = Vec::new();
+        let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
 
         for op in &self.instructions {
             match op {
