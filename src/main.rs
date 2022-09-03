@@ -110,10 +110,15 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
             if *x > 0 { '#' } else { '.' }
         }).collect();
 
+        let sol_cnt_str = sol_cnt.iter().enumerate().map(|(i, c)| format!("{}={}", i + 100, c)).join(", ");
+
+        let covered = sol_cnt.iter().filter(|&&c| c > 0).count();
+
         let mut file = File::create(file_path).unwrap();
 
         writeln!(&mut file, "solution map: {}", sol_map).unwrap();
-        writeln!(&mut file, "solution counts: {:?}", sol_cnt).unwrap();
+        writeln!(&mut file, "solution coverage: {}", covered).unwrap();
+        writeln!(&mut file, "solution counts: {}", sol_cnt_str).unwrap();
         writeln!(&mut file, "results: {}", results.solutions.len()).unwrap();
         writeln!(&mut file, "negative: {}", results.negative).unwrap();
         writeln!(&mut file, "div by zero: {}", results.div_zero).unwrap();
