@@ -73,6 +73,7 @@ enum ProgOp {
     OpDiv
 }
 
+#[derive(Debug, Eq, PartialEq)]
 enum ProgErr {
     Negative,
     DivZero,
@@ -341,4 +342,57 @@ fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: usize, slots:
     add(ProgOp::OpSub);
     add(ProgOp::OpMul);
     add(ProgOp::OpDiv);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prog_add() {
+        let mut program = Program::new(2);
+
+        program.push(ProgOp::Number(0));
+        program.push(ProgOp::Number(1));
+        program.push(ProgOp::OpAdd);
+
+        assert_eq!(Ok(7), program.run(&[3, 4]));
+    }
+
+    #[test]
+    fn prog_sub() {
+        let mut program = Program::new(2);
+
+        program.push(ProgOp::Number(0));
+        program.push(ProgOp::Number(1));
+        program.push(ProgOp::OpSub);
+
+        assert_eq!(Ok(4), program.run(&[7, 3]));
+        assert_eq!(Err(ProgErr::Negative), program.run(&[3, 4]));
+    }
+
+    #[test]
+    fn prog_mul() {
+        let mut program = Program::new(2);
+
+        program.push(ProgOp::Number(0));
+        program.push(ProgOp::Number(1));
+        program.push(ProgOp::OpMul);
+
+        assert_eq!(Ok(21), program.run(&[7, 3]));
+    }
+
+    #[test]
+    fn prog_div() {
+        let mut program = Program::new(2);
+
+        program.push(ProgOp::Number(0));
+        program.push(ProgOp::Number(1));
+        program.push(ProgOp::OpDiv);
+
+        assert_eq!(Ok(4), program.run(&[12, 3]));
+        assert_eq!(Err(ProgErr::NonInteger), program.run(&[13, 3]));
+        assert_eq!(Err(ProgErr::DivZero), program.run(&[3, 0]));
+    }
+
 }
