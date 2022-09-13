@@ -7,3 +7,6 @@ members = [
     "solve_all",
     "stats",
 ]
+
+[profile.release]
+debug = true

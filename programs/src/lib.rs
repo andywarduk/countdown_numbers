@@ -50,12 +50,13 @@ impl Programs {
 
     // Runs all of the programs in the programs collection with a given set of numbers and returns the results
     pub fn run(&self, numbers: &Vec<u32>) -> Results {
+        let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
         let mut results = Results::new();
 
         assert!(numbers.len() == self.nums);
 
         for program in &self.programs {
-            match program.run(numbers) {
+            match program.run(numbers, &mut stack) {
                 Ok(ans) => {
                     if ans < 100 {
                         results.under_range += 1;
@@ -80,12 +81,13 @@ impl Programs {
 
     // Runs all of the programs in the programs collection with a given set of numbers and a target and returns the solutions
     pub fn run_target(&self, target: u32, numbers: &Vec<u32>) -> Vec<Solution> {
+        let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
         let mut solutions = Vec::new();
 
         assert!(numbers.len() == self.nums);
 
         for program in &self.programs {
-            if let Ok(ans) = program.run(numbers) {
+            if let Ok(ans) = program.run(numbers, &mut stack) {
                 if ans == target {
                     solutions.push(Solution::new(program, ans));
                 }
@@ -156,9 +158,9 @@ impl Program {
         self.instructions.push(op);
     } 
 
-    // Runs the program with a give set of numbers
-    fn run(&self, numbers: &[u32]) -> Result<u32, ProgErr> {
-        let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
+    // Runs the program with a given set of numbers and preallocated stack
+    fn run(&self, numbers: &[u32], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
+        stack.clear();
 
         for op in &self.instructions {
             match op {
@@ -323,6 +325,7 @@ impl fmt::Debug for Program {
 
         write!(f, "{}", prog_str)
     }
+
 }
 
 // Results struct - Holds the results of running all programs with a set of numbers
@@ -516,49 +519,53 @@ mod tests {
 
     #[test]
     fn prog_add() {
+        let mut stack: Vec<u32> = Vec::new();
         let mut program = Program::new(2);
 
         program.push(ProgOp::Number(0));
         program.push(ProgOp::Number(1));
         program.push(ProgOp::OpAdd);
 
-        assert_eq!(Ok(7), program.run(&[3, 4]));
+        assert_eq!(Ok(7), program.run(&[3, 4], &mut stack));
     }
 
     #[test]
     fn prog_sub() {
+        let mut stack: Vec<u32> = Vec::new();
         let mut program = Program::new(2);
 
         program.push(ProgOp::Number(0));
         program.push(ProgOp::Number(1));
         program.push(ProgOp::OpSub);
 
-        assert_eq!(Ok(4), program.run(&[7, 3]));
-        assert_eq!(Err(ProgErr::Negative), program.run(&[3, 4]));
+        assert_eq!(Ok(4), program.run(&[7, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Negative), program.run(&[3, 4], &mut stack));
     }
 
     #[test]
     fn prog_mul() {
+        let mut stack: Vec<u32> = Vec::new();
         let mut program = Program::new(2);
 
         program.push(ProgOp::Number(0));
         program.push(ProgOp::Number(1));
         program.push(ProgOp::OpMul);
 
-        assert_eq!(Ok(21), program.run(&[7, 3]));
+        assert_eq!(Ok(21), program.run(&[7, 3], &mut stack));
     }
 
     #[test]
     fn prog_div() {
+        let mut stack: Vec<u32> = Vec::new();
         let mut program = Program::new(2);
 
         program.push(ProgOp::Number(0));
         program.push(ProgOp::Number(1));
         program.push(ProgOp::OpDiv);
 
-        assert_eq!(Ok(4), program.run(&[12, 3]));
-        assert_eq!(Err(ProgErr::NonInteger), program.run(&[13, 3]));
-        assert_eq!(Err(ProgErr::DivZero), program.run(&[3, 0]));
+        assert_eq!(Ok(4), program.run(&[12, 3], &mut stack));
+        assert_eq!(Err(ProgErr::NonInteger), program.run(&[13, 3], &mut stack));
+        assert_eq!(Err(ProgErr::DivZero), program.run(&[3, 0], &mut stack));
     }
 
 }
