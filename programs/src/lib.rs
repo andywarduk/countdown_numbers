@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use std::cmp::{min, Ordering};
 use std::fmt;
+use colored::*;
 
 pub struct Programs {
     programs: Vec<Program>,
@@ -15,7 +16,7 @@ impl Programs {
             nums
         };
 
-        for num_cnt in 2..=nums {
+        for num_cnt in 1..=nums {
             // Generate operator counts
             let op_count = op_counts(num_cnt);
     
@@ -27,6 +28,14 @@ impl Programs {
         }
     
         programs
+    }
+
+    pub fn len(&self) -> usize {
+        self.programs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.programs.is_empty()
     }
 
     fn push(&mut self, program: Program) {
@@ -62,6 +71,22 @@ impl Programs {
         results
     }
 
+    pub fn run_target(&self, target: u32, numbers: &Vec<u32>) -> Vec<Solution> {
+        let mut solutions = Vec::new();
+
+        assert!(numbers.len() == self.nums);
+
+        for program in &self.programs {
+            if let Ok(ans) = program.run(numbers) {
+                if ans == target {
+                    solutions.push(Solution::new(program, ans));
+                }
+            }
+        }
+
+        solutions
+    }
+
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -80,11 +105,6 @@ enum ProgErr {
     NonInteger
 }
 
-#[derive(Debug, Eq, PartialEq)]
-struct Program {
-    instructions: Vec<ProgOp>
-}
-
 enum ProgFmt {
     Expr(String),
     Num(u32)
@@ -99,6 +119,11 @@ impl fmt::Display for ProgFmt {
         }
     }
 
+}
+
+#[derive(Eq, PartialEq)]
+struct Program {
+    instructions: Vec<ProgOp>
 }
 
 impl Program {
@@ -154,6 +179,64 @@ impl Program {
         Ok(stack.pop().unwrap())
     }
 
+    fn print_steps(&self, numbers: &[u32]) {
+        let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
+        let mut str_stack: Vec<String> = Vec::with_capacity(numbers.len());
+
+        for op in &self.instructions {
+            match op {
+                ProgOp::Number(x) => {
+                    stack.push(numbers[*x as usize]);
+                    str_stack.push(format!("{}", numbers[*x as usize].to_string().on_blue()));
+                },
+                ProgOp::OpAdd => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+                    let n1_str = str_stack.pop().unwrap();
+                    let n2_str = str_stack.pop().unwrap();
+                    let ans = n2 + n1;
+                    let ans_str = ans.to_string();
+                    println!("{} {} {} {} {}", n2_str, "+".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    stack.push(ans);
+                    str_stack.push(ans_str);
+                },
+                ProgOp::OpSub => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+                    let n1_str = str_stack.pop().unwrap();
+                    let n2_str = str_stack.pop().unwrap();
+                    let ans = n2 - n1;
+                    let ans_str = ans.to_string();
+                    println!("{} {} {} {} {}", n2_str, "-".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    stack.push(ans);
+                    str_stack.push(ans_str);
+                },
+                ProgOp::OpMul => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+                    let n1_str = str_stack.pop().unwrap();
+                    let n2_str = str_stack.pop().unwrap();
+                    let ans = n2 * n1;
+                    let ans_str = ans.to_string();
+                    println!("{} {} {} {} {}", n2_str, "×".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    stack.push(ans);
+                    str_stack.push(ans_str);
+                },
+                ProgOp::OpDiv => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+                    let n1_str = str_stack.pop().unwrap();
+                    let n2_str = str_stack.pop().unwrap();
+                    let ans = n2 / n1;
+                    let ans_str = ans.to_string();
+                    println!("{} {} {} {} {}", n2_str, "/".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    stack.push(ans);
+                    str_stack.push(ans_str);
+                },
+            }
+        }
+    }
+
     fn format(&self, numbers: &[u32]) -> String {
         let mut stack: Vec<ProgFmt> = Vec::new();
 
@@ -189,6 +272,34 @@ impl Program {
         }
     }
 
+    fn dump(&self, numbers: &[u32]) -> String {
+        self.instructions.iter().map(|&i| {
+            match i {
+                ProgOp::Number(n) => numbers[n as usize].to_string(),
+                ProgOp::OpAdd => "+".to_string(),
+                ProgOp::OpSub => "-".to_string(),
+                ProgOp::OpMul => "×".to_string(),
+                ProgOp::OpDiv => "/".to_string(),
+            }
+        }).join(" ")
+    }
+
+}
+
+impl fmt::Debug for Program {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let prog_str = self.instructions.iter().map(|&i| {
+            match i {
+                ProgOp::Number(n) => n.to_string(),
+                ProgOp::OpAdd => "+".to_string(),
+                ProgOp::OpSub => "-".to_string(),
+                ProgOp::OpMul => "*".to_string(),
+                ProgOp::OpDiv => "/".to_string(),
+            }
+        }).join(" ");
+
+        write!(f, "{}", prog_str)
+    }
 }
 
 #[derive(Default)]
@@ -228,6 +339,14 @@ impl<'a> Solution<'a> {
         format!("{} = {}", self.program.format(numbers), self.result)
     }
 
+    pub fn print_steps(&self, numbers: &[u32]) {
+        self.program.print_steps(numbers)
+    }
+
+    pub fn program_dump(&self, numbers: &[u32]) -> String {
+        self.program.dump(numbers)
+    }
+
 }
 
 impl<'a> Ord for Solution<'a> {
@@ -262,27 +381,38 @@ impl<'a> PartialEq for Solution<'a> {
 
 fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>) {
     for nums in (0..nums).permutations(num_cnt) {
-        for op_count in op_counts {
-            for op_comb in op_combs {
-                let mut program = Program::new(num_cnt);
-                let mut op_index = 0;
+        if num_cnt == 1 {
+            let mut program = Program::new(num_cnt);
 
-                // Push first number
-                program.push(ProgOp::Number(nums[0] as u8));
+            // Push the number
+            program.push(ProgOp::Number(nums[0] as u8));
 
-                for i in 0..(num_cnt - 1) {
-                    // Push number
-                    program.push(ProgOp::Number(nums[i + 1] as u8));
+            programs.push(program);
 
-                    // Push operators
-                    for _ in 0..op_count[i] {
-                        program.push(op_comb[op_index]);
-                        op_index += 1;
+        } else {
+            for op_count in op_counts {
+                for op_comb in op_combs {
+                    let mut program = Program::new(num_cnt);
+                    let mut op_index = 0;
+
+                    // Push first number
+                    program.push(ProgOp::Number(nums[0] as u8));
+
+                    for i in 0..(num_cnt - 1) {
+                        // Push number
+                        program.push(ProgOp::Number(nums[i + 1] as u8));
+
+                        // Push operators
+                        for _ in 0..op_count[i] {
+                            program.push(op_comb[op_index]);
+                            op_index += 1;
+                        }
                     }
-                }
 
-                programs.push(program);
+                    programs.push(program);
+                }
             }
+            
         }
     }
 }
@@ -292,7 +422,9 @@ type OpCounts = Vec<Vec<usize>>;
 fn op_counts(nums: usize) -> OpCounts {
     let mut results = Vec::new();
 
-    op_counts_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1, nums - 1, 2);
+    if nums > 1 {
+        op_counts_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1, nums - 1, 2);
+    }
 
     results
 }
@@ -322,7 +454,9 @@ type OpCombs = Vec<Vec<ProgOp>>;
 fn op_combs(nums: usize) -> OpCombs {
     let mut results = Vec::new();
 
-    op_combs_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1);
+    if nums > 1 {
+        op_combs_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1);
+    }
 
     results
 }

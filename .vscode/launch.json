@@ -7,15 +7,14 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'countdown_numbers'",
+            "name": "Debug executable 'solve_all'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=countdown_numbers",
-                    "--package=countdown_numbers"
+                    "--bin=solve_all"
                 ],
                 "filter": {
-                    "name": "countdown_numbers",
+                    "name": "solve_all",
                     "kind": "bin"
                 }
             },
@@ -25,16 +24,85 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'countdown_numbers'",
+            "name": "Debug unit tests in executable 'solve_all'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=countdown_numbers",
-                    "--package=countdown_numbers"
+                    "--bin=solve_all"
                 ],
                 "filter": {
-                    "name": "countdown_numbers",
+                    "name": "solve_all",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'solve'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=solve"
+                ],
+                "filter": {
+                    "name": "solve",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'solve_all'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=solve"
+                ],
+                "filter": {
+                    "name": "solve",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'stats'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=stats"
+                ],
+                "filter": {
+                    "name": "stats",
+                    "kind": "bin"
+                }
+            },
+            "args": ["solutions"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'stats'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=stats"
+                ],
+                "filter": {
+                    "name": "stats",
                     "kind": "bin"
                 }
             },

@@ -1,11 +1,9 @@
-[package]
-name = "countdown_numbers"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-clap = { version = "3.2.20", features = ["derive"] }
-itertools = "0.10.3"
-num_cpus = "1.13.1"
+members = [
+    "cards",
+    "programs",
+    "solve",
+    "solve_all",
+    "stats",
+]

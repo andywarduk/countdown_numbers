@@ -26,6 +26,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "cards"
+version = "0.1.0"
+
+[[package]]
 name = "clap"
 version = "3.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -65,12 +69,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "countdown_numbers"
-version = "0.1.0"
+name = "colored"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3616f750b84d8f0de8a58bda93e08e2a81ad3f523089b05f1dffecab48c6cbd"
 dependencies = [
- "clap",
- "itertools",
- "num_cpus",
+ "atty",
+ "lazy_static",
+ "winapi",
 ]
 
 [[package]]
@@ -118,6 +124,12 @@ checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
 dependencies = [
  "either",
 ]
+
+[[package]]
+name = "lazy_static"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
@@ -181,6 +193,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "programs"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "itertools",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,6 +208,28 @@ checksum = "bbe448f377a7d6961e30f5955f9b8d106c3f5e449d493ee1b125c1d43c2b5179"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "solve"
+version = "0.1.0"
+dependencies = [
+ "programs",
+]
+
+[[package]]
+name = "solve_all"
+version = "0.1.0"
+dependencies = [
+ "cards",
+ "clap",
+ "itertools",
+ "num_cpus",
+ "programs",
+]
+
+[[package]]
+name = "stats"
+version = "0.1.0"
 
 [[package]]
 name = "strsim"
