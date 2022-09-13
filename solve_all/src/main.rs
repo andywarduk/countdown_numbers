@@ -12,6 +12,8 @@ use std::thread;
 use itertools::Itertools;
 use clap::Parser;
 
+// Structure to hold parsed command line arguments
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -47,7 +49,7 @@ fn main() {
 
     // Make sure we have a valid output path
     if create_out_dir(&mut args, &cards) {
-        // Generate equations
+        // Generate RPN equations
         println!("Generating programs...");
         let programs = Programs::new(6);
 
@@ -124,56 +126,62 @@ fn create_out_dir(args: &mut Args, cards: &[u32]) -> bool {
         args.out_dir = format!("solutions-{}", cards.iter().map(|c| c.to_string()).join("-"))
     };
 
+    // Convert to Path
     let path = Path::new(&args.out_dir);
 
+    // Get metadata for the path
     if let Ok(meta) = path.metadata() {
+        // Check it's a directory
         if !meta.is_dir() {
             eprintln!("{} is not a directory", &args.out_dir);
             ok = false;
         }
-    } else if let Err(e) = fs::create_dir(path) {
-        eprintln!("Error creating {} ({})", &args.out_dir, e);
-        ok = false;
+    } else {
+        // Try and create the directory
+        if let Err(e) = fs::create_dir(path) {
+            eprintln!("Error creating {} ({})", &args.out_dir, e);
+            ok = false;
+        }
     }
 
     ok
 }
 
 fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
-    let mut nums_str = String::new();
-
-    for (i, n) in numbers.iter().enumerate() {
-        if i == 0 {
-            nums_str = format!("{}", n);
-        } else {
-            nums_str = format!("{}-{}", nums_str, n);
-        }
-    }
-
+    let nums_str = numbers.iter().map(|n| format!("{}", n)).join("-");
     let file_name = format!("{}.txt", nums_str);
     let full_name = format!("{}/{}", &args.out_dir, &file_name);
     let file_path = Path::new(&full_name);
-    
+
+    // Already calculated this set?
     if !file_path.exists() {
         println!("Calculating {:?}...", numbers);
 
+        // Run all of the programs for this set of numbers
         let results = programs.run(numbers);
 
+        // Count the number of solutions for each target number
         let mut sol_cnt: [u32; 900] = [0; 900];
+
         for solution in results.solutions.iter() {
             sol_cnt[solution.result as usize - 100] += 1;
         }
 
+        // Create a solutions map string where '#' is > 0 and '.' = 0
         let sol_map: String = sol_cnt.iter().map(|x| {
             if *x > 0 { '#' } else { '.' }
         }).collect();
 
+        // Create a string listing all of the target numbers with the number of solutions
         let sol_cnt_str = sol_cnt.iter().enumerate().map(|(i, c)| format!("{}={}", i + 100, c)).join(", ");
 
+        // Count how many target numbers have > 0 solutions
         let covered = sol_cnt.iter().filter(|&&c| c > 0).count();
 
+        // Create the output file
         let mut file = File::create(file_path).unwrap();
 
+        // Write details to the output file
         writeln!(&mut file, "solution map: {}", sol_map).unwrap();
         writeln!(&mut file, "solution coverage: {}", covered).unwrap();
         writeln!(&mut file, "solution counts: {}", sol_cnt_str).unwrap();
@@ -185,6 +193,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
         writeln!(&mut file, "> 999: {}", results.above_range).unwrap();
 
         if args.output_equations {
+            // Write all equations to the equation output file
             let eqn_file_name = format!("{}-eqn.txt", nums_str);
 
             let eqn_file_path = Path::new(&eqn_file_name);

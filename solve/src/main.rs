@@ -4,8 +4,10 @@ use std::env;
 use std::process;
 
 fn main() {
+    // Parse command line arguments
     let exit_code = match parse_args() {
         Ok(args) => {
+            // Arguments ok
             println!("Target {}, Cards {:?}", args.target, args.cards);
 
             println!("Generating programs...");
@@ -17,8 +19,12 @@ fn main() {
             if solutions.is_empty() {
                 println!("== No solutions ==");
             } else {
+                println!("{} solutions found", solutions.len());
+
+                // Sort solutions by shortest first
                 solutions.sort();
 
+                // Print all solutions
                 for (i, s) in solutions.iter().enumerate() {
                     println!("== Solution {} [{}] ==", i + 1, s.program_dump(&args.cards));
                     s.print_steps(&args.cards);
@@ -28,6 +34,7 @@ fn main() {
             0
         },
         Err(code) => {
+            // Invalid arguments
             usage();
             code
         }

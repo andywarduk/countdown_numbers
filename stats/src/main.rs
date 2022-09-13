@@ -28,6 +28,7 @@ fn main() {
         let res = process_dir(&mut results, &dir);
 
         if res == 0 {
+            // Output the results
             output_results(&results);
 
             0
@@ -145,7 +146,7 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
         return Err(format!("No solution map found in {}", details.path.display()).into());
     }
 
-    // Process it
+    // Process the solution map file
     let mut sols: usize = 0;
 
     for (i, c) in line[14..].chars().enumerate() {
@@ -159,10 +160,14 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
         }
     }
 
+    // Count this file
     results.files += 1;
 
+    // Add solution count to the total number of solutions
     results.tot_sols += sols as u64;
+
     if sols > 0 {
+        // Add count to the count buckets
         results.sol_25_bucket[(sols - 1) / 25] += 1;
         results.sol_50_bucket[(sols - 1) / 50] += 1;
         results.sol_100_bucket[(sols - 1) / 100] += 1;
