@@ -13,7 +13,13 @@ pub struct Programs {
 impl Programs {
 
     // Create a new Programs struct
-    pub fn new(nums: usize) -> Self {
+    pub fn new(nums: usize, inc_commutative: bool) -> Self {
+        let operators = vec![ProgOp::OpAdd, ProgOp::OpSub, ProgOp::OpMul, ProgOp::OpDiv];
+
+        Self::new_with_operators(nums, inc_commutative, operators)
+    }
+
+    fn new_with_operators(nums: usize, inc_commutative: bool, operators: Vec<ProgOp>) -> Self {
         let mut programs = Programs {
             programs: Vec::new(),
             nums
@@ -24,10 +30,10 @@ impl Programs {
             let op_count = op_counts(num_cnt);
     
             // Generate operator combintions
-            let op_comb = op_combs(num_cnt);
-    
+            let op_comb = op_combs(num_cnt, &operators);
+
             // Generate programs
-            generate_num_programs(&mut programs, nums, num_cnt, &op_count, &op_comb);
+            generate_num_programs(&mut programs, nums, num_cnt, &op_count, &op_comb, inc_commutative);
         }
     
         programs
@@ -122,19 +128,33 @@ enum ProgErr {
 // ProgFmt enum - used to convert RPN program to infix style
 
 enum ProgFmt {
-    Expr(String), // A composite experssion
-    Num(u32)      // A single number
+    Num(u32),
+    CommAdd(Vec<u32>),
+    CommMul(Vec<u32>),
+    Expr(String),
 }
 
 impl fmt::Display for ProgFmt {
     
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            ProgFmt::Num(n) => write!(f, "{}", n),
+            ProgFmt::CommAdd(nums) => write!(f, "({})", nums.iter().map(|n| format!("{}", n)).join(" + ")),
+            ProgFmt::CommMul(nums) => write!(f, "({})", nums.iter().map(|n| format!("{}", n)).join(" * ")),
             ProgFmt::Expr(s) => write!(f, "({})", s),
-            ProgFmt::Num(n) => write!(f, "{}", n)
         }
     }
 
+}
+
+// ProgramEntity - used to filter commutative equations
+
+#[derive(Debug)]
+enum ProgEntity {
+    Card(u8),
+    CommAdd(Vec<u8>),
+    CommMul(Vec<u8>),
+    Multi
 }
 
 // Program struct - hold a single RPN program
@@ -198,6 +218,130 @@ impl Program {
         }
 
         Ok(stack.pop().unwrap())
+    }
+
+    // Returns false if the program contains a calculation which is commutative and would be covered by another program
+    fn commutative_filter(&self, stack: &mut Vec<ProgEntity>) -> bool {
+        stack.clear();
+
+        for op in &self.instructions {
+            match op {
+                ProgOp::Number(x) => stack.push(ProgEntity::Card(*x)),
+                ProgOp::OpAdd => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+                    
+                    match n1 {
+                        ProgEntity::Card(c1) => {
+                            match n2 {
+                                ProgEntity::Card(c2) => {
+                                    // c2 + c1
+                                    // Only include if first number is lower than the second
+                                    if c2 < c1 { return false }
+                                    let cards = vec![c2, c1];
+                                    stack.push(ProgEntity::CommAdd(cards));
+                                }
+                                ProgEntity::CommAdd(_) => {
+                                    // (c2 + c2 ...) + c1
+                                    // Skip commutative expressions on the left
+                                    return false;
+                                }
+                                ProgEntity::CommMul(_) | ProgEntity::Multi => {
+                                    // (eqn) + c1
+                                    // Multiple operators
+                                    stack.push(ProgEntity::Multi);
+                                }
+                            }
+                        }
+                        ProgEntity::CommAdd(cards1) => {
+                            match n2 {
+                                ProgEntity::Card(c2) => {
+                                    // c2 + (c1 + c1 ...)
+                                    // Include expansions on the right hand side if first number is lower
+                                    if c2 < cards1[0] { return false }
+                                    let cards = [c2].iter().copied().chain(cards1.iter().copied()).collect();
+                                    stack.push(ProgEntity::CommAdd(cards));
+                                }
+                                ProgEntity::CommAdd(_) => {
+                                    // (c2 + c2 ...) + (c1 + c1 ...)
+                                    // Skip commutative expressions on both sides
+                                    return false;
+                                }
+                                ProgEntity::CommMul(_) | ProgEntity::Multi => {
+                                    // (eqn) + c1
+                                    // Multiple operators
+                                    stack.push(ProgEntity::Multi);
+                                }
+                            }
+                        }
+                        ProgEntity::CommMul(_) | ProgEntity::Multi => {
+                            // Multiple operators
+                            stack.push(ProgEntity::Multi);
+                        }
+                    }
+                },
+                ProgOp::OpMul => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+                    
+                    match n1 {
+                        ProgEntity::Card(c1) => {
+                            match n2 {
+                                ProgEntity::Card(c2) => {
+                                    // c2 * c1
+                                    // Only include if first number is lower than the second
+                                    if c2 < c1 { return false }
+                                    let cards = vec![c2, c1];
+                                    stack.push(ProgEntity::CommMul(cards));
+                                }
+                                ProgEntity::CommMul(_) => {
+                                    // (c2 * c2 ...) * c1
+                                    // Skip commutative expressions on the left
+                                    return false;
+                                }
+                                ProgEntity::CommAdd(_) | ProgEntity::Multi => {
+                                    // (eqn) + c1
+                                    // Multiple operators
+                                    stack.push(ProgEntity::Multi);
+                                }
+                            }
+                        }
+                        ProgEntity::CommMul(cards1) => {
+                            match n2 {
+                                ProgEntity::Card(c2) => {
+                                    // c2 * (c1 * c1 ...)
+                                    // Include expansions on the right hand side if first number is lower
+                                    if c2 < cards1[0] { return false }
+                                    let cards = [c2].iter().copied().chain(cards1.iter().copied()).collect();
+                                    stack.push(ProgEntity::CommMul(cards));
+                                }
+                                ProgEntity::CommMul(_) => {
+                                    // (c2 * c2 ...) * (c1 * c1 ...)
+                                    // Skip commutative expressions on both sides
+                                    return false;
+                                }
+                                ProgEntity::CommAdd(_) | ProgEntity::Multi => {
+                                    // (eqn) + c1
+                                    // Multiple operators
+                                    stack.push(ProgEntity::Multi);
+                                }
+                            }
+                        }
+                        ProgEntity::CommAdd(_) | ProgEntity::Multi => {
+                            // Multiple operators
+                            stack.push(ProgEntity::Multi);
+                        }
+                    }
+                },
+                ProgOp::OpSub | ProgOp::OpDiv => {
+                    stack.pop().unwrap();
+                    stack.pop().unwrap();
+                    stack.push(ProgEntity::Multi);
+                },
+            }
+        }
+
+        true
     }
 
     // Prints the formatted steps of a program for a given set of numbers
@@ -269,7 +413,41 @@ impl Program {
                 ProgOp::OpAdd => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    stack.push(ProgFmt::Expr(format!("{} + {}", n2, n1)));
+                    match n1 {
+                        ProgFmt::CommAdd(ref nums1) => {
+                            match n2 {
+                                ProgFmt::CommAdd(nums2) => {
+                                    let nums = nums2.iter().copied().chain(nums1.iter().copied()).collect();
+                                    stack.push(ProgFmt::CommAdd(nums));
+                                }
+                                ProgFmt::Num(num2) => {
+                                    let nums = [num2].iter().copied().chain(nums1.iter().copied()).collect();
+                                    stack.push(ProgFmt::CommAdd(nums));
+                                }
+                                _ => {
+                                    stack.push(ProgFmt::Expr(format!("{} + {}", n2, n1)));
+                                }
+                            }
+                        }
+                        ProgFmt::Num(num1) => {
+                            match n2 {
+                                ProgFmt::CommAdd(nums2) => {
+                                    let nums = nums2.iter().copied().chain([num1].iter().copied()).collect();
+                                    stack.push(ProgFmt::CommAdd(nums));
+                                }
+                                ProgFmt::Num(num2) => {
+                                    let nums = vec![num2, num1];
+                                    stack.push(ProgFmt::CommAdd(nums));
+                                }
+                                _ => {
+                                    stack.push(ProgFmt::Expr(format!("{} + {}", n2, n1)));
+                                }
+                            }
+                        }
+                        _ => {
+                            stack.push(ProgFmt::Expr(format!("{} + {}", n2, n1)));
+                        }
+                    }
                 },
                 ProgOp::OpSub => {
                     let n1 = stack.pop().unwrap();
@@ -279,7 +457,41 @@ impl Program {
                 ProgOp::OpMul => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    stack.push(ProgFmt::Expr(format!("{} * {}", n2, n1)));
+                    match n1 {
+                        ProgFmt::CommMul(ref nums1) => {
+                            match n2 {
+                                ProgFmt::CommMul(nums2) => {
+                                    let nums = nums2.iter().copied().chain(nums1.iter().copied()).collect();
+                                    stack.push(ProgFmt::CommMul(nums));
+                                }
+                                ProgFmt::Num(num2) => {
+                                    let nums = [num2].iter().copied().chain(nums1.iter().copied()).collect();
+                                    stack.push(ProgFmt::CommMul(nums));
+                                }
+                                _ => {
+                                    stack.push(ProgFmt::Expr(format!("{} * {}", n2, n1)));
+                                }
+                            }
+                        }
+                        ProgFmt::Num(num1) => {
+                            match n2 {
+                                ProgFmt::CommMul(nums2) => {
+                                    let nums = nums2.iter().copied().chain([num1].iter().copied()).collect();
+                                    stack.push(ProgFmt::CommMul(nums));
+                                }
+                                ProgFmt::Num(num2) => {
+                                    let nums = vec![num2, num1];
+                                    stack.push(ProgFmt::CommMul(nums));
+                                }
+                                _ => {
+                                    stack.push(ProgFmt::Expr(format!("{} * {}", n2, n1)));
+                                }
+                            }
+                        }
+                        _ => {
+                            stack.push(ProgFmt::Expr(format!("{} * {}", n2, n1)));
+                        }
+                    }
                 },
                 ProgOp::OpDiv => {
                     let n1 = stack.pop().unwrap();
@@ -291,8 +503,10 @@ impl Program {
 
         match stack.pop().unwrap() {
             ProgFmt::Expr(s) => s,
+            ProgFmt::CommAdd(nums) => nums.iter().map(|n| format!("{}", n)).join(" + "),
+            ProgFmt::CommMul(nums) => nums.iter().map(|n| format!("{}", n)).join(" * "),
             ProgFmt::Num(n) => format!("{}", n),
-        }
+        }        
     }
 
     // Converts the RPN program to a string for a given set of numbers
@@ -412,7 +626,9 @@ impl<'a> PartialEq for Solution<'a> {
 
 // Support functions
 
-fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>) {
+fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>, inc_commutative: bool) {
+    let mut comm_stack = Vec::with_capacity(nums);
+
     for nums in (0..nums).permutations(num_cnt) {
         if num_cnt == 1 {
             let mut program = Program::new(num_cnt);
@@ -442,7 +658,10 @@ fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, o
                         }
                     }
 
-                    programs.push(program);
+                    // Commutative check
+                    if inc_commutative || program.commutative_filter(&mut comm_stack) {
+                        programs.push(program);
+                    }
                 }
             }
             
@@ -484,31 +703,31 @@ fn op_counts_rec(results: &mut OpCounts, mut current: Vec<usize>, slot: usize, s
 
 type OpCombs = Vec<Vec<ProgOp>>;
 
-fn op_combs(nums: usize) -> OpCombs {
+fn op_combs(nums: usize, operators: &Vec<ProgOp>) -> OpCombs {
     let mut results = Vec::new();
 
     if nums > 1 {
-        op_combs_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1);
+        op_combs_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1, operators);
     }
 
     results
 }
 
-fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: usize, slots: usize) {
+fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: usize, slots: usize, operators: &Vec<ProgOp>) {
     let mut add = |op: ProgOp| {
         let mut next = current.clone();
         next.push(op);
+
         if slot == slots - 1 {
             results.push(next)
         } else {
-            op_combs_rec(results, next, slot + 1, slots)
+            op_combs_rec(results, next, slot + 1, slots, operators)
         }
     };
 
-    add(ProgOp::OpAdd);
-    add(ProgOp::OpSub);
-    add(ProgOp::OpMul);
-    add(ProgOp::OpDiv);
+    for op in operators.iter() {
+        add(*op);
+    }
 }
 
 // Tests
@@ -566,6 +785,70 @@ mod tests {
         assert_eq!(Ok(4), program.run(&[12, 3], &mut stack));
         assert_eq!(Err(ProgErr::NonInteger), program.run(&[13, 3], &mut stack));
         assert_eq!(Err(ProgErr::DivZero), program.run(&[3, 0], &mut stack));
+    }
+
+    #[test]
+    fn commutative_filter_test_mul() {
+        let programs = Programs::new_with_operators(4, false, vec![ProgOp::OpMul]);
+
+        let numbers = vec![1, 2, 3, 4];
+
+        for p in &programs.programs {
+            println!("RPN: {}  Equation: {}", p.dump(&numbers), p.format(&numbers));
+        }
+
+        assert_eq!(15, programs.len());
+
+        assert_eq!("1", programs.programs[0].format(&numbers));
+        assert_eq!("2", programs.programs[1].format(&numbers));
+        assert_eq!("3", programs.programs[2].format(&numbers));
+        assert_eq!("4", programs.programs[3].format(&numbers));
+
+        assert_eq!("2 * 1", programs.programs[4].format(&numbers));
+        assert_eq!("3 * 1", programs.programs[5].format(&numbers));
+        assert_eq!("3 * 2", programs.programs[6].format(&numbers));
+        assert_eq!("4 * 1", programs.programs[7].format(&numbers));
+        assert_eq!("4 * 2", programs.programs[8].format(&numbers));
+        assert_eq!("4 * 3", programs.programs[9].format(&numbers));
+
+        assert_eq!("3 * 2 * 1", programs.programs[10].format(&numbers));
+        assert_eq!("4 * 2 * 1", programs.programs[11].format(&numbers));
+        assert_eq!("4 * 3 * 1", programs.programs[12].format(&numbers));
+        assert_eq!("4 * 3 * 2", programs.programs[13].format(&numbers));
+
+        assert_eq!("4 * 3 * 2 * 1", programs.programs[14].format(&numbers));
+    }
+
+    #[test]
+    fn commutative_filter_test_add() {
+        let programs = Programs::new_with_operators(4, false, vec![ProgOp::OpAdd]);
+
+        let numbers = vec![1, 2, 3, 4];
+
+        for p in &programs.programs {
+            println!("RPN: {}  Equation: {}", p.dump(&numbers), p.format(&numbers));
+        }
+
+        assert_eq!(15, programs.len());
+
+        assert_eq!("1", programs.programs[0].format(&numbers));
+        assert_eq!("2", programs.programs[1].format(&numbers));
+        assert_eq!("3", programs.programs[2].format(&numbers));
+        assert_eq!("4", programs.programs[3].format(&numbers));
+
+        assert_eq!("2 + 1", programs.programs[4].format(&numbers));
+        assert_eq!("3 + 1", programs.programs[5].format(&numbers));
+        assert_eq!("3 + 2", programs.programs[6].format(&numbers));
+        assert_eq!("4 + 1", programs.programs[7].format(&numbers));
+        assert_eq!("4 + 2", programs.programs[8].format(&numbers));
+        assert_eq!("4 + 3", programs.programs[9].format(&numbers));
+
+        assert_eq!("3 + 2 + 1", programs.programs[10].format(&numbers));
+        assert_eq!("4 + 2 + 1", programs.programs[11].format(&numbers));
+        assert_eq!("4 + 3 + 1", programs.programs[12].format(&numbers));
+        assert_eq!("4 + 3 + 2", programs.programs[13].format(&numbers));
+
+        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].format(&numbers));
     }
 
 }

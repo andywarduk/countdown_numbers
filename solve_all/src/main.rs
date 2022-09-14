@@ -6,6 +6,7 @@ use std::path::Path;
 use std::collections::HashSet;
 use std::fs;
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
 use std::sync::{Mutex, Arc};
 use std::thread;
@@ -32,6 +33,10 @@ struct Args {
     /// Use special cards
     #[clap(short='s', long="special", action)]
     special_cards: bool,
+
+    /// Include commutative equations
+    #[clap(short='c', long="commutative", action)]
+    inc_commutative: bool,
 }
 
 fn main() {
@@ -50,11 +55,14 @@ fn main() {
     // Make sure we have a valid output path
     if create_out_dir(&mut args, &cards) {
         // Generate RPN equations
-        println!("Generating programs...");
-        let programs = Programs::new(6);
+        print!("Generating programs...");
+        io::stdout().flush().unwrap();
+        let programs = Programs::new(6, args.inc_commutative);
+        println!(" {} programs generated", programs.len());
 
         // Generate card combinations
-        println!("Generating card combinations...");    
+        print!("Generating card combinations...");    
+        io::stdout().flush().unwrap();
         let card_combs = Arc::new(Mutex::new({
             let mut card_combs: VecDeque<Vec<u32>> = VecDeque::new();
             let mut hash: HashSet<Vec<&u32>> = HashSet::new();
@@ -66,6 +74,8 @@ fn main() {
                     card_combs.push_back(numbers);
                 }
             }
+
+            println!(" {} card combinations generated", card_combs.len());
 
             card_combs
         }));
@@ -123,7 +133,8 @@ fn create_out_dir(args: &mut Args, cards: &[u32]) -> bool {
 
     if args.out_dir.is_empty() {
         // Create default directory name
-        args.out_dir = format!("solutions-{}", cards.iter().map(|c| c.to_string()).join("-"))
+        let comm_str = if args.inc_commutative { "C" } else { "NC" };
+        args.out_dir = format!("solutions-{}-{}", comm_str, cards.iter().map(|c| c.to_string()).join("-"))
     };
 
     // Convert to Path
@@ -191,6 +202,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
         writeln!(&mut file, "non-integer: {}", results.non_integer).unwrap();
         writeln!(&mut file, "< 100: {}", results.under_range).unwrap();
         writeln!(&mut file, "> 999: {}", results.above_range).unwrap();
+        writeln!(&mut file, "commutative included: {}", if args.inc_commutative { "Yes" } else { "No" }).unwrap();
 
         if args.output_equations {
             // Write all equations to the equation output file

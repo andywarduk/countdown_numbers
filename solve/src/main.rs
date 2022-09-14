@@ -1,5 +1,6 @@
 use programs::{Programs};
 
+use std::collections::HashSet;
 use std::env;
 use std::process;
 
@@ -11,7 +12,7 @@ fn main() {
             println!("Target {}, Cards {:?}", args.target, args.cards);
 
             println!("Generating programs...");
-            let programs = Programs::new(args.cards.len());
+            let programs = Programs::new(args.cards.len(), args.inc_commutative);
     
             println!("Running {} programs...", programs.len());
             let mut solutions = programs.run_target(args.target, &args.cards);
@@ -19,6 +20,20 @@ fn main() {
             if solutions.is_empty() {
                 println!("== No solutions ==");
             } else {
+                // Filter out identical equations (can happen when duplicate card is chosen)
+                let mut eqn_set = HashSet::with_capacity(solutions.len());
+
+                solutions = solutions.into_iter().filter(|s| {
+                    let rpn = s.program_dump(&args.cards);
+
+                    if eqn_set.contains(&rpn) {
+                        false
+                    } else {
+                        eqn_set.insert(rpn);
+                        true
+                    }
+                }).collect();
+
                 println!("{} solutions found", solutions.len());
 
                 // Sort solutions by shortest first
@@ -45,29 +60,44 @@ fn main() {
 
 struct Args {
     target: u32,
-    cards: Vec<u32>
+    cards: Vec<u32>,
+    inc_commutative: bool,
 }
 
 fn parse_args() -> Result<Args, i32> {
-    let mut arg_iter = env::args();
+    let mut arg_iter = env::args().skip(1);
+    let mut inc_commutative = false;
 
-    // Skip program name
-    arg_iter.next();
-
-    // Get target from arguments
-    let target = match arg_iter.next() {
-        Some(str) => {
-            match str.parse::<u32>() {
-                Ok(num) => num,
-                Err(std::num::ParseIntError { .. }) => {
-                    eprintln!("Target must be a number (\"{}\")", str);
-                    return Err(1)
+    // Get target value and any flags from arguments
+    let target = loop {
+        match arg_iter.next() {
+            Some(arg) => {
+                if arg.starts_with('-') {
+                    // A command line switch
+                    match &arg[1..] {
+                        "c" | "-commutative" => {
+                            inc_commutative = true;
+                        },
+                        _ => {
+                            eprintln!("Unrecognised switch '{}'", arg);
+                            return Err(1)
+                        }
+                    }
+                } else {
+                    // Parse target number
+                    match arg.parse::<u32>() {
+                        Ok(num) => break num,
+                        Err(std::num::ParseIntError { .. }) => {
+                            eprintln!("Target must be a number (\"{}\")", arg);
+                            return Err(1);
+                        }
+                    }
                 }
-            }    
-        },
-        None => {
-            eprintln!("No target value");
-            return Err(1)
+            }
+            None => {
+                eprintln!("No target value");
+                return Err(1)
+            }
         }
     };
 
@@ -87,10 +117,13 @@ fn parse_args() -> Result<Args, i32> {
 
     Ok(Args {
         target,
-        cards
+        cards,
+        inc_commutative,
     })
 }
 
 fn usage() {
-    println!("Usage: solve <target> <card> [<card> ...]")
+    println!("Usage: solve [-c|--commutative] <target> <card> [<card> ...]");
+    println!("Where:");
+    println!("  -c | --commutative   Include commutative equations")
 }
