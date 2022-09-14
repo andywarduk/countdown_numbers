@@ -46,16 +46,16 @@ const TARGET_COUNT: usize = 900;
 
 #[derive(Clone)]
 struct Stats {
-    files: u32,
-    sol_count: Vec<u32>,
+    files: usize,
+    sol_count: Vec<usize>,
     min_sol_cnt: usize,
     min_sols: Option<Vec<Vec<u32>>>,
     max_sol_cnt: usize,
     max_sols: Option<Vec<Vec<u32>>>,
-    tot_sols: u64,
-    sol_25_bucket: Vec<u32>,
-    sol_50_bucket: Vec<u32>,
-    sol_100_bucket: Vec<u32>,
+    tot_sols: usize,
+    sol_25_bucket: Vec<usize>,
+    sol_50_bucket: Vec<usize>,
+    sol_100_bucket: Vec<usize>,
 }
 
 impl Default for Stats {
@@ -204,7 +204,7 @@ fn update_stats(stats: &mut Stats, details: &FileDetails, sols: usize, sol_reach
     stats.files += 1;
 
     // Add solution count to the total number of solutions
-    stats.tot_sols += sols as u64;
+    stats.tot_sols += sols;
 
     if sols > 0 {
         // Add count to the count buckets
@@ -254,7 +254,9 @@ fn output_results(results: &Results) {
     println!();
     println!("Big Number Average Achieved");
     for i in 0..MAX_BIG {
-        println!("{}, {}, {:.2}", i, results.big_stats[i].files, results.big_stats[i].tot_sols as f64 / results.big_stats[i].files as f64)
+        let avg = results.big_stats[i].tot_sols as f64 / results.big_stats[i].files as f64;
+
+        println!("{}, {}, {:.2}, {}", i, results.big_stats[i].files, avg, percentf(avg, 900))
     }
 
     for i in 0..MAX_BIG {
@@ -334,6 +336,10 @@ fn output_stats(stats: &Stats, desc: &str) {
 
 }
 
-fn percent(n: u32, tot: u32) -> String {
+fn percent(n: usize, tot: usize) -> String {
     format!("{:.2}%", ((n as f64 / tot as f64) * 100f64))
+}
+
+fn percentf(n: f64, tot: usize) -> String {
+    format!("{:.2}%", (n / tot as f64) * 100f64)
 }
