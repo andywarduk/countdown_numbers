@@ -41,33 +41,53 @@ fn main() {
     });
 }
 
-struct Results {
+const MAX_BIG: usize = 5;
+const TARGET_COUNT: usize = 900;
+
+#[derive(Clone)]
+struct Stats {
     files: u32,
-    sol_count: [u32; 900],
+    sol_count: Vec<u32>,
     min_sol_cnt: usize,
     min_sols: Option<Vec<Vec<u32>>>,
     max_sol_cnt: usize,
     max_sols: Option<Vec<Vec<u32>>>,
     tot_sols: u64,
-    sol_25_bucket: [u32; 900 / 25],
-    sol_50_bucket: [u32; 900 / 50],
-    sol_100_bucket: [u32; 900 / 100],
+    sol_25_bucket: Vec<u32>,
+    sol_50_bucket: Vec<u32>,
+    sol_100_bucket: Vec<u32>,
+}
+
+impl Default for Stats {
+
+    fn default() -> Self {
+        Self {
+            files: 0,
+            sol_count: vec![0; TARGET_COUNT],
+            min_sol_cnt: 0,
+            min_sols: None,
+            max_sol_cnt: 0,
+            max_sols: None,
+            tot_sols: 0,
+            sol_25_bucket: vec![0; TARGET_COUNT / 25],
+            sol_50_bucket: vec![0; TARGET_COUNT / 50],
+            sol_100_bucket: vec![0; TARGET_COUNT / 100]
+        }
+    }
+
+}
+
+struct Results {
+    stats: Stats,
+    big_stats: Vec<Stats>,
 }
 
 impl Default for Results {
 
     fn default() -> Self {
         Self {
-            files: 0,
-            sol_count: [0; 900],
-            min_sol_cnt: 0,
-            min_sols: None,
-            max_sol_cnt: 0,
-            max_sols: None,
-            tot_sols: 0,
-            sol_25_bucket: [0; 900 / 25],
-            sol_50_bucket: [0; 900 / 50],
-            sol_100_bucket: [0; 900 / 100],
+            stats: Stats::default(),
+            big_stats: vec![Stats::default(); MAX_BIG]
         }
     }
 
@@ -148,11 +168,12 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
 
     // Process the solution map file
     let mut sols: usize = 0;
+    let mut sol_reached: [bool; TARGET_COUNT] = [false; TARGET_COUNT];
 
     for (i, c) in line[14..].chars().enumerate() {
         match c {
             '#' => {
-                results.sol_count[i] += 1;
+                sol_reached[i] = true;
                 sols += 1;
             }
             '.' | '\n' => (),
@@ -160,66 +181,99 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
         }
     }
 
+    update_stats(&mut results.stats, &details, sols, &sol_reached);
+
+    // Update big number stats
+    let big_cnt = details.cards.iter().filter(|&c| *c > 10).count();
+
+    if big_cnt < MAX_BIG {
+        update_stats(&mut results.big_stats[big_cnt], &details, sols, &sol_reached);
+    }
+
+    Ok(())
+}
+
+fn update_stats(stats: &mut Stats, details: &FileDetails, sols: usize, sol_reached: &[bool]) {
+    for (i, reached) in sol_reached.iter().enumerate() {
+        if *reached {
+            stats.sol_count[i] += 1;
+        }
+    }
+
     // Count this file
-    results.files += 1;
+    stats.files += 1;
 
     // Add solution count to the total number of solutions
-    results.tot_sols += sols as u64;
+    stats.tot_sols += sols as u64;
 
     if sols > 0 {
         // Add count to the count buckets
-        results.sol_25_bucket[(sols - 1) / 25] += 1;
-        results.sol_50_bucket[(sols - 1) / 50] += 1;
-        results.sol_100_bucket[(sols - 1) / 100] += 1;
+        stats.sol_25_bucket[(sols - 1) / 25] += 1;
+        stats.sol_50_bucket[(sols - 1) / 50] += 1;
+        stats.sol_100_bucket[(sols - 1) / 100] += 1;
     }
 
     // Update minimum solutions list
-    if results.min_sols.is_none() {
-        results.min_sols = Some(Vec::new());
-        results.min_sol_cnt = sols;
+    if stats.min_sols.is_none() {
+        stats.min_sols = Some(Vec::new());
+        stats.min_sol_cnt = sols;
     }
 
-    if sols < results.min_sol_cnt {
-        let min_sols = results.min_sols.as_mut().unwrap();
+    if sols < stats.min_sol_cnt {
+        let min_sols = stats.min_sols.as_mut().unwrap();
         min_sols.clear();
-        results.min_sol_cnt = sols;
+        stats.min_sol_cnt = sols;
     }
 
-    if sols == results.min_sol_cnt {
-        let min_sols = results.min_sols.as_mut().unwrap();
+    if sols == stats.min_sol_cnt {
+        let min_sols = stats.min_sols.as_mut().unwrap();
         min_sols.push(details.cards.clone());
     }
 
     // Update maximum solutions list
-    if results.max_sols.is_none() {
-        results.max_sols = Some(Vec::new());
-        results.max_sol_cnt = sols;
+    if stats.max_sols.is_none() {
+        stats.max_sols = Some(Vec::new());
+        stats.max_sol_cnt = sols;
     }
 
-    if sols > results.max_sol_cnt {
-        let max_sols = results.max_sols.as_mut().unwrap();
+    if sols > stats.max_sol_cnt {
+        let max_sols = stats.max_sols.as_mut().unwrap();
         max_sols.clear();
-        results.max_sol_cnt = sols;
+        stats.max_sol_cnt = sols;
     }
 
-    if sols == results.max_sol_cnt {
-        let max_sols = results.max_sols.as_mut().unwrap();
+    if sols == stats.max_sol_cnt {
+        let max_sols = stats.max_sols.as_mut().unwrap();
         max_sols.push(details.cards.clone());
     }
-    
-    Ok(())
 }
 
 fn output_results(results: &Results) {
-    let mut min_sols = results.sol_count[0];
+    output_stats(&results.stats, "Overall");
+
+    println!();
+    println!("Big Number Average Achieved");
+    for i in 0..MAX_BIG {
+        println!("{}, {}, {:.2}", i, results.big_stats[i].files, results.big_stats[i].tot_sols as f64 / results.big_stats[i].files as f64)
+    }
+
+    for i in 0..MAX_BIG {
+        println!();
+        output_stats(&results.big_stats[i], &format!("{} Big Numbers", i));
+    }
+}
+
+fn output_stats(stats: &Stats, desc: &str) {
+    let mut min_sols = stats.sol_count[0];
     let mut min_sol_elems = Vec::new();
-    let mut max_sols = results.sol_count[0];
+    let mut max_sols = stats.sol_count[0];
     let mut max_sol_elems= Vec::new();
 
+    println!("===== {} =====", desc);
     println!("Target, Combinations");
 
-    for (i, &n) in results.sol_count.iter().enumerate() {
-        println!("{}, {}", i + 100, n);
+    for (i, &n) in stats.sol_count.iter().enumerate() {
+        println!("{}, {}, {}", i + 100, n, percent(n, stats.files));
 
         if n < min_sols {
             min_sols = n;
@@ -240,30 +294,46 @@ fn output_results(results: &Results) {
         }
     }
 
+    let mut cumul;
+
     println!();
-    println!("Targets Achieved (buckets of 25)");
-    for (i, n) in results.sol_25_bucket.iter().enumerate() {
-        println!("{}, {}, {}", (i * 25) + 1, (i + 1) * 25, n)
+    println!("{} Targets Achieved (buckets of 25)", desc);
+    cumul = 0;
+    for (i, n) in stats.sol_25_bucket.iter().enumerate() {
+        cumul += n;
+        println!("{}-{}, {}, {}, {}, {}", (i * 25) + 1, (i + 1) * 25, n, percent(*n, stats.files), cumul, percent(cumul, stats.files))
     }
 
     println!();
-    println!("Targets Achieved (buckets of 50)");
-    for (i, n) in results.sol_50_bucket.iter().enumerate() {
-        println!("{}, {}, {}", (i * 50) + 1, (i + 1) * 50, n)
+    println!("{} Targets Achieved (buckets of 50)", desc);
+    cumul = 0;
+    for (i, n) in stats.sol_50_bucket.iter().enumerate() {
+        cumul += n;
+        println!("{}-{}, {}, {}, {}, {}", (i * 50) + 1, (i + 1) * 50, n, percent(*n, stats.files), cumul, percent(cumul, stats.files))
     }
 
     println!();
-    println!("Targets Achieved (buckets of 100)");
-    for (i, n) in results.sol_100_bucket.iter().enumerate() {
-        println!("{}, {}, {}", (i * 100) + 1, (i + 1) * 100, n)
+    println!("{} Targets Achieved (buckets of 100)", desc);
+    cumul = 0;
+    for (i, n) in stats.sol_100_bucket.iter().enumerate() {
+        cumul += n;
+        println!("{}-{}, {}, {}, {}, {}", (i * 100) + 1, (i + 1) * 100, n, percent(*n, stats.files), cumul, percent(cumul, stats.files))
     }
 
     println!();
-    println!("Overall Statistics");
-    println!("Min Target Achieved, {}, Targets, {}", min_sols, min_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", "));
-    println!("Max Target Achieved, {}, Targets, {}", max_sols, max_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", "));
-    println!("Average Target Achieved, {:.2}", results.tot_sols as f64 / results.files as f64);
-    println!("Min Solutions, {}, Count, {}, Cards, {:?}", results.min_sol_cnt, results.min_sols.as_ref().unwrap().len(), results.min_sols.as_ref().unwrap());
-    println!("Max Solutions, {}, Count, {}", results.max_sol_cnt, results.max_sols.as_ref().unwrap().len());
-    println!("Card Combinations, {}", results.files);
+    println!("{} Statistics", desc);
+    println!("Min Target Achieved, {}, {}, Targets, {}", min_sols, percent(min_sols, stats.files),
+        min_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", "));
+    println!("Max Target Achieved, {}, {}, Targets, {}", max_sols, percent(max_sols, stats.files),
+        max_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", "));
+    println!("Average Target Achieved, {:.2}", stats.tot_sols as f64 / stats.files as f64);
+    println!("Min Solutions, {}, Count, {}, Cards, {:?}", stats.min_sol_cnt,
+        stats.min_sols.as_ref().unwrap().len(), stats.min_sols.as_ref().unwrap());
+    println!("Max Solutions, {}, Count, {}", stats.max_sol_cnt, stats.max_sols.as_ref().unwrap().len());
+    println!("Card Combinations, {}", stats.files);
+
+}
+
+fn percent(n: u32, tot: u32) -> String {
+    format!("{:.2}%", ((n as f64 / tot as f64) * 100f64))
 }
