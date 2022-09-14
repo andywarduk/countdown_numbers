@@ -24,7 +24,7 @@ fn main() {
                 let mut eqn_set = HashSet::with_capacity(solutions.len());
 
                 solutions = solutions.into_iter().filter(|s| {
-                    let rpn = s.program_dump(&args.cards);
+                    let rpn = s.program_rpn(&args.cards);
 
                     if eqn_set.contains(&rpn) {
                         false
@@ -41,8 +41,15 @@ fn main() {
 
                 // Print all solutions
                 for (i, s) in solutions.iter().enumerate() {
-                    println!("== Solution {} [{}] ==", i + 1, s.program_dump(&args.cards));
-                    s.print_steps(&args.cards);
+                    println!("== Solution {} ==", i + 1);
+
+                    println!("RPN: {}", s.program_rpn(&args.cards));
+                    println!("Equation: {}", s.program_equation(&args.cards));
+
+                    println!("Steps:");
+                    for l in s.program_steps(&args.cards) {
+                        println!("  {}", l);
+                    }
                 }
             }
 

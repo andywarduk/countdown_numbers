@@ -74,9 +74,11 @@ impl Programs {
                 }
                 Err(e) => {
                     match e {
+                        ProgErr::Zero => results.zero += 1,
                         ProgErr::Negative => results.negative += 1,
                         ProgErr::DivZero => results.div_zero += 1,
                         ProgErr::NonInteger => results.non_integer += 1,
+                        ProgErr::Mul1 => results.mult_by_1 += 1,
                     }
                 }
             }
@@ -120,9 +122,11 @@ enum ProgOp {
 
 #[derive(Debug, Eq, PartialEq)]
 enum ProgErr {
-    Negative,  // Program generated a negative intermediate result
-    DivZero,   // Program encountered a division by zero
-    NonInteger // Program encountered a non-integer intermediate result
+    Zero,       // Program generated a zero intermediate result
+    Negative,   // Program generated a negative intermediate result
+    DivZero,    // Program encountered a division by zero
+    NonInteger, // Program encountered a non-integer intermediate result
+    Mul1,       // Program encountered multiply by 1 (noop)
 }
 
 // ProgFmt enum - used to convert RPN program to infix style
@@ -138,9 +142,9 @@ impl fmt::Display for ProgFmt {
     
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ProgFmt::Num(n) => write!(f, "{}", n),
-            ProgFmt::CommAdd(nums) => write!(f, "({})", nums.iter().map(|n| format!("{}", n)).join(" + ")),
-            ProgFmt::CommMul(nums) => write!(f, "({})", nums.iter().map(|n| format!("{}", n)).join(" * ")),
+            ProgFmt::Num(n) => write!(f, "{}", n.to_string().on_blue()),
+            ProgFmt::CommAdd(nums) => write!(f, "({})", nums.iter().map(|n| n.to_string().on_blue()).join(&" + ".dimmed())),
+            ProgFmt::CommMul(nums) => write!(f, "({})", nums.iter().map(|n| n.to_string().on_blue()).join(&" * ".dimmed())),
             ProgFmt::Expr(s) => write!(f, "({})", s),
         }
     }
@@ -188,30 +192,53 @@ impl Program {
                 ProgOp::OpAdd => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
+
                     stack.push(n2 + n1);
                 },
                 ProgOp::OpSub => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
+
                     if n2 < n1 {
                         return Err(ProgErr::Negative)
                     }
-                    stack.push(n2 - n1);
+
+                    let int = n2 - n1;
+
+                    if int == 0 {
+                        return Err(ProgErr::Zero)
+                    }
+
+                    stack.push(int);
                 },
                 ProgOp::OpMul => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    stack.push(n2 * n1);
+
+                    if n1 == 1 || n2 == 1 {
+                        return Err(ProgErr::Mul1)
+                    }
+
+                    let int = n2 * n1;
+
+                    if int == 0 {
+                        return Err(ProgErr::Zero)
+                    }
+
+                    stack.push(int);
                 },
                 ProgOp::OpDiv => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
+
                     if n1 == 0 {
                         return Err(ProgErr::DivZero)
                     }
+
                     if n2 % n1 != 0 {
                         return Err(ProgErr::NonInteger)
                     }
+
                     stack.push(n2 / n1);
                 },
             }
@@ -344,16 +371,27 @@ impl Program {
         true
     }
 
-    // Prints the formatted steps of a program for a given set of numbers
-    fn print_steps(&self, numbers: &[u32]) {
+    // Returns the formatted steps of a program for a given set of numbers
+    fn steps(&self, numbers: &[u32], colour: bool) -> Vec<String> {
+        let mut result = Vec::new();
         let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
         let mut str_stack: Vec<String> = Vec::with_capacity(numbers.len());
+
+        let oper = |str: &str| -> String {
+            if colour { str.dimmed().to_string() }
+            else { str.to_string() }
+        };
+
+        let card = |c: u32| -> String {
+            if colour { c.to_string().on_blue().to_string() }
+            else { c.to_string() }
+        };
 
         for op in &self.instructions {
             match op {
                 ProgOp::Number(x) => {
                     stack.push(numbers[*x as usize]);
-                    str_stack.push(format!("{}", numbers[*x as usize].to_string().on_blue()));
+                    str_stack.push(card(numbers[*x as usize]));
                 },
                 ProgOp::OpAdd => {
                     let n1 = stack.pop().unwrap();
@@ -362,7 +400,7 @@ impl Program {
                     let n2_str = str_stack.pop().unwrap();
                     let ans = n2 + n1;
                     let ans_str = ans.to_string();
-                    println!("{} {} {} {} {}", n2_str, "+".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    result.push(format!("{} {} {} {} {}", n2_str, oper("+"), n1_str, oper("="), ans_str));
                     stack.push(ans);
                     str_stack.push(ans_str);
                 },
@@ -373,7 +411,7 @@ impl Program {
                     let n2_str = str_stack.pop().unwrap();
                     let ans = n2 - n1;
                     let ans_str = ans.to_string();
-                    println!("{} {} {} {} {}", n2_str, "-".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    result.push(format!("{} {} {} {} {}", n2_str, oper("-"), n1_str, oper("="), ans_str));
                     stack.push(ans);
                     str_stack.push(ans_str);
                 },
@@ -384,7 +422,7 @@ impl Program {
                     let n2_str = str_stack.pop().unwrap();
                     let ans = n2 * n1;
                     let ans_str = ans.to_string();
-                    println!("{} {} {} {} {}", n2_str, "×".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    result.push(format!("{} {} {} {} {}", n2_str, oper("×"), n1_str, oper("="), ans_str));
                     stack.push(ans);
                     str_stack.push(ans_str);
                 },
@@ -395,17 +433,37 @@ impl Program {
                     let n2_str = str_stack.pop().unwrap();
                     let ans = n2 / n1;
                     let ans_str = ans.to_string();
-                    println!("{} {} {} {} {}", n2_str, "/".dimmed(), n1_str, "=".dimmed(), ans_str);
+                    result.push(format!("{} {} {} {} {}", n2_str, oper("/"), n1_str, oper("="), ans_str));
                     stack.push(ans);
                     str_stack.push(ans_str);
                 },
             }
         }
+
+        result
     }
 
     // Converts the RPN program to infix equation
-    fn format(&self, numbers: &[u32]) -> String {
+    fn equation(&self, numbers: &[u32], colour: bool) -> String {
         let mut stack: Vec<ProgFmt> = Vec::new();
+
+        let oper = |o| -> String {
+            let char = match o {
+                ProgOp::OpAdd => "+",
+                ProgOp::OpSub => "-",
+                ProgOp::OpMul => "×",
+                ProgOp::OpDiv => "/",
+                _ => panic!("Invalid operator")
+            };
+
+            if colour { char.dimmed().to_string() }
+            else { char.to_string() }
+        };
+
+        let card = |c: u32| -> String {
+            if colour { c.to_string().on_blue().to_string() }
+            else { c.to_string() }
+        };
 
         for op in self.instructions.iter() {
             match op {
@@ -413,6 +471,7 @@ impl Program {
                 ProgOp::OpAdd => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
+
                     match n1 {
                         ProgFmt::CommAdd(ref nums1) => {
                             match n2 {
@@ -425,7 +484,7 @@ impl Program {
                                     stack.push(ProgFmt::CommAdd(nums));
                                 }
                                 _ => {
-                                    stack.push(ProgFmt::Expr(format!("{} + {}", n2, n1)));
+                                    stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpAdd), n1)));
                                 }
                             }
                         }
@@ -440,23 +499,25 @@ impl Program {
                                     stack.push(ProgFmt::CommAdd(nums));
                                 }
                                 _ => {
-                                    stack.push(ProgFmt::Expr(format!("{} + {}", n2, n1)));
+                                    stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpAdd), n1)));
                                 }
                             }
                         }
                         _ => {
-                            stack.push(ProgFmt::Expr(format!("{} + {}", n2, n1)));
+                            stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpAdd), n1)));
                         }
                     }
                 },
                 ProgOp::OpSub => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    stack.push(ProgFmt::Expr(format!("{} - {}", n2, n1)));
+
+                    stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpSub), n1)));
                 },
                 ProgOp::OpMul => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
+
                     match n1 {
                         ProgFmt::CommMul(ref nums1) => {
                             match n2 {
@@ -469,7 +530,7 @@ impl Program {
                                     stack.push(ProgFmt::CommMul(nums));
                                 }
                                 _ => {
-                                    stack.push(ProgFmt::Expr(format!("{} * {}", n2, n1)));
+                                    stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpMul), n1)));
                                 }
                             }
                         }
@@ -484,40 +545,53 @@ impl Program {
                                     stack.push(ProgFmt::CommMul(nums));
                                 }
                                 _ => {
-                                    stack.push(ProgFmt::Expr(format!("{} * {}", n2, n1)));
+                                    stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpMul), n1)));
                                 }
                             }
                         }
                         _ => {
-                            stack.push(ProgFmt::Expr(format!("{} * {}", n2, n1)));
+                            stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpMul), n1)));
                         }
                     }
                 },
                 ProgOp::OpDiv => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    stack.push(ProgFmt::Expr(format!("{} / {}", n2, n1)));
+
+                    stack.push(ProgFmt::Expr(format!("{} {} {}", n2, oper(ProgOp::OpDiv), n1)));
                 },
             }
         }
 
-        match stack.pop().unwrap() {
+        let result = match stack.pop().unwrap() {
             ProgFmt::Expr(s) => s,
-            ProgFmt::CommAdd(nums) => nums.iter().map(|n| format!("{}", n)).join(" + "),
-            ProgFmt::CommMul(nums) => nums.iter().map(|n| format!("{}", n)).join(" * "),
-            ProgFmt::Num(n) => format!("{}", n),
-        }        
+            ProgFmt::CommAdd(nums) => nums.iter().map(|n| card(*n)).join(&" + ".dimmed()),
+            ProgFmt::CommMul(nums) => nums.iter().map(|n| card(*n)).join(&" × ".dimmed()),
+            ProgFmt::Num(n) => card(n),
+        };
+
+        result
     }
 
     // Converts the RPN program to a string for a given set of numbers
-    fn dump(&self, numbers: &[u32]) -> String {
+    fn rpn(&self, numbers: &[u32], colour: bool) -> String {
+        let oper = |str: &str| -> String {
+            if colour { str.dimmed().to_string() }
+            else { str.to_string() }
+        };
+
+        let card = |c: u32| -> String {
+            if colour { c.to_string().on_blue().to_string() }
+            else { c.to_string() }
+        };
+
         self.instructions.iter().map(|&i| {
             match i {
-                ProgOp::Number(n) => numbers[n as usize].to_string(),
-                ProgOp::OpAdd => "+".to_string(),
-                ProgOp::OpSub => "-".to_string(),
-                ProgOp::OpMul => "×".to_string(),
-                ProgOp::OpDiv => "/".to_string(),
+                ProgOp::Number(n) => card(numbers[n as usize]),
+                ProgOp::OpAdd => oper("+"),
+                ProgOp::OpSub => oper("-"),
+                ProgOp::OpMul => oper("×"),
+                ProgOp::OpDiv => oper("/"),
             }
         }).join(" ")
     }
@@ -549,9 +623,11 @@ pub struct Results<'a> {
     pub solutions: Vec<Solution<'a>>, // Valid solution collection
     pub under_range: usize,           // Number of programs with answer below valid range
     pub above_range: usize,           // Number of programs with answer above valid range
+    pub zero: usize,                  // Number of programs with zero intermediate result
     pub negative: usize,              // Number of programs with negative intermediate result
     pub div_zero: usize,              // Number of programs encountering division by zero
     pub non_integer: usize,           // Number of programs with non-integer intermediate result
+    pub mult_by_1: usize              // Number of programs containing a multipy by 1
 }
 
 impl<'a> Results<'a> {
@@ -580,16 +656,16 @@ impl<'a> Solution<'a> {
         }
     }
 
-    pub fn format(&self, numbers: &[u32]) -> String {
-        format!("{} = {}", self.program.format(numbers), self.result)
+    pub fn program_equation(&self, numbers: &[u32]) -> String {
+        format!("{} {} {}", self.program.equation(numbers, true), "=".dimmed(), self.result)
     }
 
-    pub fn print_steps(&self, numbers: &[u32]) {
-        self.program.print_steps(numbers)
+    pub fn program_steps(&self, numbers: &[u32]) -> Vec<String> {
+        self.program.steps(numbers, true)
     }
 
-    pub fn program_dump(&self, numbers: &[u32]) -> String {
-        self.program.dump(numbers)
+    pub fn program_rpn(&self, numbers: &[u32]) -> String {
+        self.program.rpn(numbers, true)
     }
 
 }
@@ -758,6 +834,7 @@ mod tests {
         program.push(ProgOp::OpSub);
 
         assert_eq!(Ok(4), program.run(&[7, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[3, 3], &mut stack));
         assert_eq!(Err(ProgErr::Negative), program.run(&[3, 4], &mut stack));
     }
 
@@ -771,6 +848,11 @@ mod tests {
         program.push(ProgOp::OpMul);
 
         assert_eq!(Ok(21), program.run(&[7, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Mul1), program.run(&[7, 1], &mut stack));
+        assert_eq!(Err(ProgErr::Mul1), program.run(&[1, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[7, 0], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[0, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[0, 0], &mut stack));
     }
 
     #[test]
@@ -794,29 +876,29 @@ mod tests {
         let numbers = vec![1, 2, 3, 4];
 
         for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.dump(&numbers), p.format(&numbers));
+            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.equation(&numbers, true));
         }
 
         assert_eq!(15, programs.len());
 
-        assert_eq!("1", programs.programs[0].format(&numbers));
-        assert_eq!("2", programs.programs[1].format(&numbers));
-        assert_eq!("3", programs.programs[2].format(&numbers));
-        assert_eq!("4", programs.programs[3].format(&numbers));
+        assert_eq!("1", programs.programs[0].equation(&numbers, false));
+        assert_eq!("2", programs.programs[1].equation(&numbers, false));
+        assert_eq!("3", programs.programs[2].equation(&numbers, false));
+        assert_eq!("4", programs.programs[3].equation(&numbers, false));
 
-        assert_eq!("2 * 1", programs.programs[4].format(&numbers));
-        assert_eq!("3 * 1", programs.programs[5].format(&numbers));
-        assert_eq!("3 * 2", programs.programs[6].format(&numbers));
-        assert_eq!("4 * 1", programs.programs[7].format(&numbers));
-        assert_eq!("4 * 2", programs.programs[8].format(&numbers));
-        assert_eq!("4 * 3", programs.programs[9].format(&numbers));
+        assert_eq!("2 × 1", programs.programs[4].equation(&numbers, false));
+        assert_eq!("3 × 1", programs.programs[5].equation(&numbers, false));
+        assert_eq!("3 × 2", programs.programs[6].equation(&numbers, false));
+        assert_eq!("4 × 1", programs.programs[7].equation(&numbers, false));
+        assert_eq!("4 × 2", programs.programs[8].equation(&numbers, false));
+        assert_eq!("4 × 3", programs.programs[9].equation(&numbers, false));
 
-        assert_eq!("3 * 2 * 1", programs.programs[10].format(&numbers));
-        assert_eq!("4 * 2 * 1", programs.programs[11].format(&numbers));
-        assert_eq!("4 * 3 * 1", programs.programs[12].format(&numbers));
-        assert_eq!("4 * 3 * 2", programs.programs[13].format(&numbers));
+        assert_eq!("3 × 2 × 1", programs.programs[10].equation(&numbers, false));
+        assert_eq!("4 × 2 × 1", programs.programs[11].equation(&numbers, false));
+        assert_eq!("4 × 3 × 1", programs.programs[12].equation(&numbers, false));
+        assert_eq!("4 × 3 × 2", programs.programs[13].equation(&numbers, false));
 
-        assert_eq!("4 * 3 * 2 * 1", programs.programs[14].format(&numbers));
+        assert_eq!("4 × 3 × 2 × 1", programs.programs[14].equation(&numbers, false));
     }
 
     #[test]
@@ -826,29 +908,29 @@ mod tests {
         let numbers = vec![1, 2, 3, 4];
 
         for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.dump(&numbers), p.format(&numbers));
+            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.equation(&numbers, true));
         }
 
         assert_eq!(15, programs.len());
 
-        assert_eq!("1", programs.programs[0].format(&numbers));
-        assert_eq!("2", programs.programs[1].format(&numbers));
-        assert_eq!("3", programs.programs[2].format(&numbers));
-        assert_eq!("4", programs.programs[3].format(&numbers));
+        assert_eq!("1", programs.programs[0].equation(&numbers, false));
+        assert_eq!("2", programs.programs[1].equation(&numbers, false));
+        assert_eq!("3", programs.programs[2].equation(&numbers, false));
+        assert_eq!("4", programs.programs[3].equation(&numbers, false));
 
-        assert_eq!("2 + 1", programs.programs[4].format(&numbers));
-        assert_eq!("3 + 1", programs.programs[5].format(&numbers));
-        assert_eq!("3 + 2", programs.programs[6].format(&numbers));
-        assert_eq!("4 + 1", programs.programs[7].format(&numbers));
-        assert_eq!("4 + 2", programs.programs[8].format(&numbers));
-        assert_eq!("4 + 3", programs.programs[9].format(&numbers));
+        assert_eq!("2 + 1", programs.programs[4].equation(&numbers, false));
+        assert_eq!("3 + 1", programs.programs[5].equation(&numbers, false));
+        assert_eq!("3 + 2", programs.programs[6].equation(&numbers, false));
+        assert_eq!("4 + 1", programs.programs[7].equation(&numbers, false));
+        assert_eq!("4 + 2", programs.programs[8].equation(&numbers, false));
+        assert_eq!("4 + 3", programs.programs[9].equation(&numbers, false));
 
-        assert_eq!("3 + 2 + 1", programs.programs[10].format(&numbers));
-        assert_eq!("4 + 2 + 1", programs.programs[11].format(&numbers));
-        assert_eq!("4 + 3 + 1", programs.programs[12].format(&numbers));
-        assert_eq!("4 + 3 + 2", programs.programs[13].format(&numbers));
+        assert_eq!("3 + 2 + 1", programs.programs[10].equation(&numbers, false));
+        assert_eq!("4 + 2 + 1", programs.programs[11].equation(&numbers, false));
+        assert_eq!("4 + 3 + 1", programs.programs[12].equation(&numbers, false));
+        assert_eq!("4 + 3 + 2", programs.programs[13].equation(&numbers, false));
 
-        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].format(&numbers));
+        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].equation(&numbers, false));
     }
 
 }

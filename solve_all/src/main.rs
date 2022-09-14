@@ -197,9 +197,11 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
         writeln!(&mut file, "solution coverage: {}", covered).unwrap();
         writeln!(&mut file, "solution counts: {}", sol_cnt_str).unwrap();
         writeln!(&mut file, "results: {}", results.solutions.len()).unwrap();
-        writeln!(&mut file, "negative: {}", results.negative).unwrap();
+        writeln!(&mut file, "zero intermediate: {}", results.zero).unwrap();
+        writeln!(&mut file, "negative intermediate: {}", results.negative).unwrap();
         writeln!(&mut file, "div by zero: {}", results.div_zero).unwrap();
         writeln!(&mut file, "non-integer: {}", results.non_integer).unwrap();
+        writeln!(&mut file, "multiply by 1: {}", results.mult_by_1).unwrap();
         writeln!(&mut file, "< 100: {}", results.under_range).unwrap();
         writeln!(&mut file, "> 999: {}", results.above_range).unwrap();
         writeln!(&mut file, "commutative included: {}", if args.inc_commutative { "Yes" } else { "No" }).unwrap();
@@ -213,7 +215,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
             let mut eqn_file = File::create(eqn_file_path).unwrap();
 
             for solution in results.solutions.iter().sorted() {
-                writeln!(&mut eqn_file, "{}", solution.format(numbers)).unwrap();
+                writeln!(&mut eqn_file, "{}", solution.program_equation(numbers)).unwrap();
             }
         }
     }
