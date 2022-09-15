@@ -302,8 +302,20 @@ impl Program {
                             }
                         }
                         ProgEntity::CommMul(_) | ProgEntity::Multi => {
-                            // Multiple operators
-                            stack.push(ProgEntity::Multi);
+                            match n2 {
+                                ProgEntity::Card(_) => {
+                                    // c2 + (c1 * c1 ...) or c2 + (eqn)
+                                    // Skip equations with card on the left hand side
+                                    return false;
+                                }
+                                _ => {
+                                    // (c2 + c2 ...) + (c1 * c1...) or (c2 + c2 ...) + (eqn)
+                                    // (c2 * c2 ...) + (c1 * c1...) or (c2 * c2 ...) + (eqn)
+                                    // (eqn) + (c1 * c1...) or (eqn) + (eqn)
+                                    // Multiple operators
+                                    stack.push(ProgEntity::Multi);
+                                }
+                            }
                         }
                     }
                 },
@@ -355,8 +367,20 @@ impl Program {
                             }
                         }
                         ProgEntity::CommAdd(_) | ProgEntity::Multi => {
-                            // Multiple operators
-                            stack.push(ProgEntity::Multi);
+                            match n2 {
+                                ProgEntity::Card(_) => {
+                                    // c2 * (c1 + c1 ...) or c2 * (eqn)
+                                    // Skip equations with card on the left hand side
+                                    return false;
+                                }
+                                _ => {
+                                    // (c2 + c2 ...) * (c1 + c1...) or (c2 + c2 ...) * (eqn)
+                                    // (c2 * c2 ...) * (c1 + c1...) or (c2 * c2 ...) * (eqn)
+                                    // (eqn) * (c1 + c1...) or (eqn) * (eqn)
+                                    // Multiple operators
+                                    stack.push(ProgEntity::Multi);
+                                }
+                            }
                         }
                     }
                 },
