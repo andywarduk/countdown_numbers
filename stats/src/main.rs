@@ -324,14 +324,34 @@ fn output_stats(stats: &Stats, desc: &str) {
 
     println!();
     println!("{} Statistics", desc);
-    println!("Min Target Achieved, {}, {}, Targets, {}", min_sols, percent(min_sols, stats.files),
-        min_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", "));
-    println!("Max Target Achieved, {}, {}, Targets, {}", max_sols, percent(max_sols, stats.files),
-        max_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", "));
-    println!("Average Target Achieved, {:.2}", stats.tot_sols as f64 / stats.files as f64);
-    println!("Min Solutions, {}, Count, {}, Cards, {:?}", stats.min_sol_cnt,
-        stats.min_sols.as_ref().unwrap().len(), stats.min_sols.as_ref().unwrap());
-    println!("Max Solutions, {}, Count, {}", stats.max_sol_cnt, stats.max_sols.as_ref().unwrap().len());
+
+    let elems = min_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", ");
+    println!("Min Target Achieved, {}, {}, Targets, {}", min_sols, percent(min_sols, stats.files), elems);
+
+    let elems = max_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", ");
+    println!("Max Target Achieved, {}, {}, Targets, {}", max_sols, percent(max_sols, stats.files), elems);
+
+    let avg_achieved = stats.tot_sols as f64 / stats.files as f64;
+    println!("Average Target Achieved, {:.2}, {}", avg_achieved, percentf(avg_achieved, 900));
+
+    let sols = stats.min_sols.as_ref().unwrap();
+    let count = sols.len();
+    print!("Min Solutions, {}, {}, Count, {}", stats.min_sol_cnt, percent(stats.min_sol_cnt, 900), count);
+    if count <= 5 {
+        println!(", Cards, {:?}", sols);
+    } else {
+        println!();
+    }
+
+    let sols = stats.max_sols.as_ref().unwrap();
+    let count = sols.len();
+    print!("Max Solutions, {}, {}, Count, {}", stats.max_sol_cnt, percent(stats.max_sol_cnt, 900), count);
+    if count <= 5 {
+        println!(", Cards, {:?}", sols);
+    } else {
+        println!();
+    }
+    
     println!("Card Combinations, {}", stats.files);
 
 }

@@ -23,7 +23,7 @@ The output looks like this:
 
 The solutions are sorted by shortest number of steps to reach the target. Each solution shows the equation in [reverse Polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation), a single line equation and individual steps.
 
-## Statistical analysis
+## Statistical Analysis
 The `solve_all` binary will produce a file for each combination of cards possible containing details of all of the possible targets for the chosen cards.
 To run:
 ```
@@ -38,3 +38,57 @@ The `stats` binary can then be run to post-process the output directory and prod
 cargo run --release --bin stats solutions-NC-100-75-50-25-10-10-9-9-8-8-7-7-6-6-5-5-4-4-3-3-2-2-1-1
 ```
 Output from this is included in the repostitory.
+
+### Card Combinations
+
+|               | Combinations |
+|--------------:|-------------:|
+| Overall       |       13,243 |
+| 0 big numbers |        2,850 |
+| 1 big numbers |        5,808 |
+| 2 big numbers |        3,690 |
+| 3 big numbers |          840 |
+| 4 big numbers |           55 |
+
+### Success Rate
+
+|               | Success Rate |
+|--------------:|-------------:|
+| Overall       |          91% |
+| 0 big numbers |          77% |
+| 1 big number  |          95% |
+| 2 big numbers |          96% |
+| 3 big numbers |          92% |
+| 4 big numbers |          88% |
+
+### Hardest Target
+
+|               | Target | Success Rate |
+|---------------|-------:|-------------:|
+| Overall       |    947 |          68% |
+| 0 big numbers |    831 |          29% |
+| 1 big number  |    941 |          73% |
+| 2 big numbers |    967 |          81% |
+| 3 big numbers |    863 |          68% |
+| 4 big numbers |    839 |          40% |
+
+### Worst Cards
+
+|               | Card Set         | Success Rate |
+|---------------|:----------------:|-------------:|
+| 0 big numbers | 3 3 2 2 1 1      |          0%  |
+| 1 big number  | 25 3 2 2 1 1     |          27% |
+| 2 big numbers | 100 50 2 2 1 1   |          31% |
+| 3 big numbers | 100 75 50 2 1 1  |          25% |
+| 4 big numbers | 100 75 50 25 1 1 |          36% |
+
+### Best Cards
+
+|               | Success Rate | Card Sets    |
+|---------------|-------------:|:------------:|
+| Overall       |         100% | 1226 / 13243 |
+| 0 big numbers |         100% | 5 / 2850 <br/> 10 9 8 8 7 6 <br/> 10 9 8 7 5 2 <br/> 10 9 8 7 6 5 <br/> 10 10 9 8 7 6 <br/> 10 9 8 7 4 3 |
+| 1 big number  |         100% | 614 / 5808   |
+| 2 big numbers |         100% | 603 / 3960   |
+| 3 big numbers |         100% | 4 / 840 <br/> 100 75 25 9 8 6 <br/> 100 50 25 10 7 6 <br/> 100 75 50 9 8 2 <br/> 100 75 25 9 8 2 |
+| 4 big numbers |          98% | 1 / 55 <br/> 100 75 50 25 9 8 |
