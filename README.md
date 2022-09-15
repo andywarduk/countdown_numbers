@@ -13,7 +13,7 @@ To solve a numbers game the `solve` binary is run:
 ```
 cargo run --release --bin solve -- 756 25 75 3 9 6 10
 ```
-or use the covenience script (unix):
+or use the convenience script (unix):
 ```
 ./solve.sh 756 25 75 3 9 6 10
 ```
@@ -84,11 +84,11 @@ Output from this is included in the repostitory.
 
 ### Best Cards
 
-|               | Success Rate | Card Sets    |
-|---------------|-------------:|:------------:|
-| Overall       |         100% | 1226 / 13243 |
-| 0 big numbers |         100% | 5 / 2850 <br/> 10 9 8 8 7 6 <br/> 10 9 8 7 5 2 <br/> 10 9 8 7 6 5 <br/> 10 10 9 8 7 6 <br/> 10 9 8 7 4 3 |
-| 1 big number  |         100% | 614 / 5808   |
-| 2 big numbers |         100% | 603 / 3960   |
+|               | Success Rate | Card Sets      |
+|---------------|-------------:|:--------------:|
+| Overall       |         100% | 1,226 / 13,243 |
+| 0 big numbers |         100% | 5 / 2,850 <br/> 10 9 8 8 7 6 <br/> 10 9 8 7 5 2 <br/> 10 9 8 7 6 5 <br/> 10 10 9 8 7 6 <br/> 10 9 8 7 4 3 |
+| 1 big number  |         100% | 614 / 5,808    |
+| 2 big numbers |         100% | 603 / 3,960    |
 | 3 big numbers |         100% | 4 / 840 <br/> 100 75 25 9 8 6 <br/> 100 50 25 10 7 6 <br/> 100 75 50 9 8 2 <br/> 100 75 25 9 8 2 |
 | 4 big numbers |          98% | 1 / 55 <br/> 100 75 50 25 9 8 |
