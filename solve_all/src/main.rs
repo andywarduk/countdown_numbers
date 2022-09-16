@@ -202,6 +202,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
         writeln!(&mut file, "div by zero: {}", results.div_zero).unwrap();
         writeln!(&mut file, "non-integer: {}", results.non_integer).unwrap();
         writeln!(&mut file, "multiply by 1: {}", results.mult_by_1).unwrap();
+        writeln!(&mut file, "divide by 1: {}", results.div_by_1).unwrap();
         writeln!(&mut file, "< 100: {}", results.under_range).unwrap();
         writeln!(&mut file, "> 999: {}", results.above_range).unwrap();
         writeln!(&mut file, "commutative included: {}", if args.inc_commutative { "Yes" } else { "No" }).unwrap();

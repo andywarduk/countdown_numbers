@@ -23,6 +23,19 @@ The output looks like this:
 
 The solutions are sorted by shortest number of steps to reach the target. Each solution shows the equation in [reverse Polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation), a single line equation and individual steps.
 
+An example with only 5 solutions:
+
+```
+$ ./solve.sh -i 917 100 25 5 3 3 1
+...
+5 solutions found
+25 - 5 + (((3 × 100) - 1) × 3) = 917
+((((5 + 100) × 3) - 1) × 3) - 25 = 917
+(((3 × 100) - 1) × 3) + 25 - 5 = 917
+(((3 × 100) - 1) × 3) + 25 - 5 = 917
+(((3 × 100) - 1) × 3) - 5 + 25 = 917
+```
+
 ## Statistical Analysis
 The `solve_all` binary will produce a file for each combination of cards possible containing details of all of the possible targets for the chosen cards.
 To run:
