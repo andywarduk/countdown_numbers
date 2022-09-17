@@ -1,4 +1,4 @@
-pub mod op_tree;
+pub mod infix;
 pub mod progop;
 pub mod program;
 
@@ -156,7 +156,7 @@ impl<'a> Solution<'a> {
 
     /// Returns the program equation in infix style
     pub fn program_equation(&self, numbers: &[u32]) -> String {
-        format!("{} {} {}", self.program.equation(numbers, true), "=".dimmed(), self.result)
+        format!("{} {} {}", self.program.infix(numbers, true), "=".dimmed(), self.result)
     }
 
     /// Returns the program equation in infix style in discrete steps
@@ -390,16 +390,15 @@ mod tests {
 
         let numbers = [25, 5, 4];
 
-        println!("{:?}", program1.op_tree());
         println!("1: rpn: {} eqn: {} steps: {}",
             program1.rpn(&numbers, true),
-            program1.equation(&numbers, true),
+            program1.infix(&numbers, true),
             program1.steps(&numbers, true).iter().join(", ")
         );
 
         println!("2: rpn: {} eqn: {} steps: {}",
             program2.rpn(&numbers, true),
-            program2.equation(&numbers, true),
+            program2.infix(&numbers, true),
             program2.steps(&numbers, true).iter().join(", ")
         );
 
@@ -413,29 +412,29 @@ mod tests {
         let numbers = vec![1, 2, 3, 4];
 
         for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.equation(&numbers, true));
+            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true));
         }
 
         assert_eq!(15, programs.len());
 
-        assert_eq!("1", programs.programs[0].equation(&numbers, false));
-        assert_eq!("2", programs.programs[1].equation(&numbers, false));
-        assert_eq!("3", programs.programs[2].equation(&numbers, false));
-        assert_eq!("4", programs.programs[3].equation(&numbers, false));
+        assert_eq!("1", programs.programs[0].infix(&numbers, false));
+        assert_eq!("2", programs.programs[1].infix(&numbers, false));
+        assert_eq!("3", programs.programs[2].infix(&numbers, false));
+        assert_eq!("4", programs.programs[3].infix(&numbers, false));
 
-        assert_eq!("2 × 1", programs.programs[4].equation(&numbers, false));
-        assert_eq!("3 × 1", programs.programs[5].equation(&numbers, false));
-        assert_eq!("3 × 2", programs.programs[6].equation(&numbers, false));
-        assert_eq!("4 × 1", programs.programs[7].equation(&numbers, false));
-        assert_eq!("4 × 2", programs.programs[8].equation(&numbers, false));
-        assert_eq!("4 × 3", programs.programs[9].equation(&numbers, false));
+        assert_eq!("2 × 1", programs.programs[4].infix(&numbers, false));
+        assert_eq!("3 × 1", programs.programs[5].infix(&numbers, false));
+        assert_eq!("3 × 2", programs.programs[6].infix(&numbers, false));
+        assert_eq!("4 × 1", programs.programs[7].infix(&numbers, false));
+        assert_eq!("4 × 2", programs.programs[8].infix(&numbers, false));
+        assert_eq!("4 × 3", programs.programs[9].infix(&numbers, false));
 
-        assert_eq!("3 × 2 × 1", programs.programs[10].equation(&numbers, false));
-        assert_eq!("4 × 2 × 1", programs.programs[11].equation(&numbers, false));
-        assert_eq!("4 × 3 × 1", programs.programs[12].equation(&numbers, false));
-        assert_eq!("4 × 3 × 2", programs.programs[13].equation(&numbers, false));
+        assert_eq!("3 × 2 × 1", programs.programs[10].infix(&numbers, false));
+        assert_eq!("4 × 2 × 1", programs.programs[11].infix(&numbers, false));
+        assert_eq!("4 × 3 × 1", programs.programs[12].infix(&numbers, false));
+        assert_eq!("4 × 3 × 2", programs.programs[13].infix(&numbers, false));
 
-        assert_eq!("4 × 3 × 2 × 1", programs.programs[14].equation(&numbers, false));
+        assert_eq!("4 × 3 × 2 × 1", programs.programs[14].infix(&numbers, false));
     }
 
     #[test]
@@ -445,29 +444,29 @@ mod tests {
         let numbers = vec![1, 2, 3, 4];
 
         for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.equation(&numbers, true));
+            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true));
         }
 
         assert_eq!(15, programs.len());
 
-        assert_eq!("1", programs.programs[0].equation(&numbers, false));
-        assert_eq!("2", programs.programs[1].equation(&numbers, false));
-        assert_eq!("3", programs.programs[2].equation(&numbers, false));
-        assert_eq!("4", programs.programs[3].equation(&numbers, false));
+        assert_eq!("1", programs.programs[0].infix(&numbers, false));
+        assert_eq!("2", programs.programs[1].infix(&numbers, false));
+        assert_eq!("3", programs.programs[2].infix(&numbers, false));
+        assert_eq!("4", programs.programs[3].infix(&numbers, false));
 
-        assert_eq!("2 + 1", programs.programs[4].equation(&numbers, false));
-        assert_eq!("3 + 1", programs.programs[5].equation(&numbers, false));
-        assert_eq!("3 + 2", programs.programs[6].equation(&numbers, false));
-        assert_eq!("4 + 1", programs.programs[7].equation(&numbers, false));
-        assert_eq!("4 + 2", programs.programs[8].equation(&numbers, false));
-        assert_eq!("4 + 3", programs.programs[9].equation(&numbers, false));
+        assert_eq!("2 + 1", programs.programs[4].infix(&numbers, false));
+        assert_eq!("3 + 1", programs.programs[5].infix(&numbers, false));
+        assert_eq!("3 + 2", programs.programs[6].infix(&numbers, false));
+        assert_eq!("4 + 1", programs.programs[7].infix(&numbers, false));
+        assert_eq!("4 + 2", programs.programs[8].infix(&numbers, false));
+        assert_eq!("4 + 3", programs.programs[9].infix(&numbers, false));
 
-        assert_eq!("3 + 2 + 1", programs.programs[10].equation(&numbers, false));
-        assert_eq!("4 + 2 + 1", programs.programs[11].equation(&numbers, false));
-        assert_eq!("4 + 3 + 1", programs.programs[12].equation(&numbers, false));
-        assert_eq!("4 + 3 + 2", programs.programs[13].equation(&numbers, false));
+        assert_eq!("3 + 2 + 1", programs.programs[10].infix(&numbers, false));
+        assert_eq!("4 + 2 + 1", programs.programs[11].infix(&numbers, false));
+        assert_eq!("4 + 3 + 1", programs.programs[12].infix(&numbers, false));
+        assert_eq!("4 + 3 + 2", programs.programs[13].infix(&numbers, false));
 
-        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].equation(&numbers, false));
+        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].infix(&numbers, false));
     }
 
 }

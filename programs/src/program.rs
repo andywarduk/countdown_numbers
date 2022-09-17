@@ -1,12 +1,13 @@
 use crate::progop::*;
-use crate::op_tree::*;
+use crate::infix::*;
 use colored::*;
 use itertools::Itertools;
+use std::convert;
 
 /// Holds a single RPN program
 #[derive(Eq, PartialEq)]
 pub struct Program {
-    instructions: Vec<ProgOp>
+    instructions: Vec<ProgOp>,
 }
 
 impl Program {
@@ -14,7 +15,7 @@ impl Program {
     /// Creates a new program
     pub fn new(num_cnt: usize) -> Self {
         Program {
-            instructions: Vec::with_capacity(num_cnt + (num_cnt - 1))
+            instructions: Vec::with_capacity(num_cnt + (num_cnt - 1)),
         }
     }
 
@@ -99,190 +100,119 @@ impl Program {
 
     /// Returns false if the program contains a calculation which is commutative and would be covered by another program
     pub fn commutative_filter(&self) -> bool {
-        let mut op_tree = self.op_tree();
-        op_tree = op_tree.simplify();
+        // Build infix tree based on operator precedence
+        let tree = self.infix_format(InfixSimplifyMode::Prec);
 
-        Program::commutative_filter_walk(&op_tree)
-    }
-
-    fn commutative_filter_walk(node: &OpTreeNode) -> bool {
-        match node {
-            OpTreeNode::Number(_) => {}
-            OpTreeNode::Op(o) => {
-                // Check the operator is commutative
-                match o.op {
-                    ProgOp::OpAdd | ProgOp::OpMul => {
-                        // Add or multiply operator
-                        match o.lhs {
-                            OpTreeNode::Number(ln) => {
-                                // Number on the left
-                                match o.rhs {
-                                    OpTreeNode::Number(rn) => {
-                                        // Number on the right
-                                        // Always go from smallest to biggest
-                                        if ln > rn { return false; }
-                                    }
-                                    _ => ()
-                                }
-                            }
-                            _ => ()
-                        }
-                    },
-                    _ => ()
-                }
-
-                if !Program::commutative_filter_walk(&o.lhs) { return false; }
-                if !Program::commutative_filter_walk(&o.rhs) { return false; }
-            }
-            OpTreeNode::Multi(o) => {
-                // Check the operator is commutative
-                match o.op {
-                    ProgOp::OpAdd | ProgOp::OpMul => {
-                        // Add or multiply operator
-                        let mut cur_n = None;
-                        let mut got_expr = false;
-
-                        for t in &o.terms {
-                            match t {
-                                OpTreeNode::Number(n) => {
-                                    if got_expr { return false; }
-                                    if let Some(cur_n) = cur_n {
-                                        // Always go from smallest to biggest
-                                        if n < cur_n { return false; }
-                                    }
-                                    cur_n = Some(n);
-                                }
-                                OpTreeNode::Op(_) | OpTreeNode::Multi(_) => {
-                                    got_expr = true
-                                }
-                            }
-                        }
-                    },
-                    _ => ()
-                }
-
-            }
-        }
+        // TODO Program::commutative_filter_walk(&op_tree)
 
         true
     }
 
     /// Returns the formatted steps of a program for a given set of numbers
     pub fn steps(&self, numbers: &[u32], colour: bool) -> Vec<String> {
-        let mut result = Vec::new();
+        let mut steps = Vec::new();
         let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
         let mut str_stack: Vec<String> = Vec::with_capacity(numbers.len());
 
-        let oper = |str: &str| -> String {
-            if colour { str.dimmed().to_string() }
-            else { str.to_string() }
-        };
+        let mut add_step = |op: &ProgOp, ans: u32, stack: &mut Vec<u32>, str_stack: &mut Vec<String>| {
+            let n1_str = str_stack.pop().unwrap();
+            let n2_str = str_stack.pop().unwrap();
+            let ans_str = ans.to_string();
 
-        let card = |c: u32| -> String {
-            if colour { c.to_string().on_blue().to_string() }
-            else { c.to_string() }
+            let equals = if colour { "=".dimmed().to_string() } else { "=".to_string() };
+            steps.push(format!("{} {} {} {} {}", n2_str, op.colour(colour, numbers), n1_str, equals, ans_str));
+
+            stack.push(ans);
+            str_stack.push(ans_str);
         };
 
         for op in &self.instructions {
             match op {
                 ProgOp::Number(x) => {
                     stack.push(numbers[*x as usize]);
-                    str_stack.push(card(numbers[*x as usize]));
+                    str_stack.push(op.colour(colour, numbers));
                 },
                 ProgOp::OpAdd => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    let n1_str = str_stack.pop().unwrap();
-                    let n2_str = str_stack.pop().unwrap();
                     let ans = n2 + n1;
-                    let ans_str = ans.to_string();
-                    result.push(format!("{} {} {} {} {}", n2_str, oper("+"), n1_str, oper("="), ans_str));
-                    stack.push(ans);
-                    str_stack.push(ans_str);
+                    add_step(op, ans, &mut stack, &mut str_stack);
                 },
                 ProgOp::OpSub => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    let n1_str = str_stack.pop().unwrap();
-                    let n2_str = str_stack.pop().unwrap();
                     let ans = n2 - n1;
-                    let ans_str = ans.to_string();
-                    result.push(format!("{} {} {} {} {}", n2_str, oper("-"), n1_str, oper("="), ans_str));
-                    stack.push(ans);
-                    str_stack.push(ans_str);
+                    add_step(op, ans, &mut stack, &mut str_stack);
                 },
                 ProgOp::OpMul => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    let n1_str = str_stack.pop().unwrap();
-                    let n2_str = str_stack.pop().unwrap();
                     let ans = n2 * n1;
-                    let ans_str = ans.to_string();
-                    result.push(format!("{} {} {} {} {}", n2_str, oper("×"), n1_str, oper("="), ans_str));
-                    stack.push(ans);
-                    str_stack.push(ans_str);
+                    add_step(op, ans, &mut stack, &mut str_stack);
                 },
                 ProgOp::OpDiv => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    let n1_str = str_stack.pop().unwrap();
-                    let n2_str = str_stack.pop().unwrap();
                     let ans = n2 / n1;
-                    let ans_str = ans.to_string();
-                    result.push(format!("{} {} {} {} {}", n2_str, oper("/"), n1_str, oper("="), ans_str));
-                    stack.push(ans);
-                    str_stack.push(ans_str);
+                    add_step(op, ans, &mut stack, &mut str_stack);
                 },
             }
         }
 
-        result
-    }
-
-    /// Build an operator tree for the program
-    pub fn op_tree(&self) -> OpTreeNode {
-        let mut stack: Vec<OpTreeNode> = Vec::new();
-
-        for op in self.instructions.iter() {
-            match *op {
-                ProgOp::Number(n) => stack.push(OpTreeNode::new_number(n)),
-                _ => {
-                    let rhs = stack.pop().unwrap();
-                    let lhs = stack.pop().unwrap();
-                    stack.push(OpTreeNode::new_op(lhs, *op, rhs))
-                }
-            }
-        }
-
-        stack.pop().unwrap()
+        steps
     }
 
     /// Converts the RPN program to infix equation
-    pub fn equation(&self, numbers: &[u32], colour: bool) -> String {
-        self.op_tree().colour(numbers, colour, false)
+    pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
+        self.infix_format(InfixSimplifyMode::Full).colour(colour, numbers)
+    }
+
+    /// Returns the infix tree for the program
+    pub fn infix_tree(&self) -> Infix {
+        build_infix_tree(&self.instructions)
+    }
+
+    /// Returns the simplified infix tree for the program
+    pub fn infix_format(&self, mode: InfixSimplifyMode) -> InfixFmtElem {
+        infix_simplify(&self.infix_tree(), mode)
     }
 
     /// Converts the RPN program to a string for a given set of numbers
     pub fn rpn(&self, numbers: &[u32], colour: bool) -> String {
-        let oper = |str: &str| -> String {
-            if colour { str.dimmed().to_string() }
-            else { str.to_string() }
-        };
+        self.instructions.iter().map(|i| i.colour(colour, numbers)).join(" ")
+    }
 
-        let card = |c: u32| -> String {
-            if colour { c.to_string().on_blue().to_string() }
-            else { c.to_string() }
-        };
+}
 
-        self.instructions.iter().map(|&i| {
-            match i {
-                ProgOp::Number(n) => card(numbers[n as usize]),
-                ProgOp::OpAdd => oper("+"),
-                ProgOp::OpSub => oper("-"),
-                ProgOp::OpMul => oper("×"),
-                ProgOp::OpDiv => oper("/"),
+impl convert::From<Vec<ProgOp>> for Program {
+
+    fn from(instructions: Vec<ProgOp>) -> Self {
+        Program {
+            instructions,
+        }
+    }
+
+}
+
+impl convert::From<&str> for Program {
+
+    fn from(rpn: &str) -> Self {
+        let instructions = rpn.chars().filter_map(|c| {
+            match c {
+                '0'..='9' => Some(ProgOp::Number(c as u8 - '0' as u8)),
+                'a'..='z' => Some(ProgOp::Number(c as u8 - 'a' as u8)),
+                'A'..='Z' => Some(ProgOp::Number(c as u8 - 'A' as u8)),
+                '+' => Some(ProgOp::OpAdd),
+                '-' => Some(ProgOp::OpSub),
+                '*' => Some(ProgOp::OpMul),
+                '/' => Some(ProgOp::OpDiv),
+                _ => None
             }
-        }).join(" ")
+        }).collect();
+
+        Program {
+            instructions,
+        }
     }
 
 }
@@ -290,10 +220,16 @@ impl Program {
 /// Errors generated by RPN program run
 #[derive(Debug, Eq, PartialEq)]
 pub enum ProgErr {
-    Zero,       // Program generated a zero intermediate result
-    Negative,   // Program generated a negative intermediate result
-    DivZero,    // Program encountered a division by zero
-    NonInteger, // Program encountered a non-integer intermediate result
-    Mul1,       // Program encountered multiply by 1 (noop)
-    Div1,       // Program encountered divide by 1 (noop)
+    /// Program generated a zero intermediate result
+    Zero,       
+    /// Program generated a negative intermediate result
+    Negative,   
+    /// Program encountered a division by zero
+    DivZero,    
+    /// Program encountered a non-integer intermediate result
+    NonInteger, 
+    /// Program encountered multiply by 1 (noop)
+    Mul1,       
+    /// Program encountered divide by 1 (noop)
+    Div1,       
 }
