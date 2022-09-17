@@ -72,7 +72,7 @@ impl fmt::Debug for ProgOp {
 }
 
 // Operator associativity
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ProgOpAssoc {
     Left,
     Right,

@@ -2,8 +2,6 @@ use itertools::Itertools;
 
 use crate::progop::*;
 
-// TODO try and make this an iterator instead to avoid vec allocations
-
 pub fn build_infix_tree(instructions: &[ProgOp]) -> Infix {
     let mut stack = Vec::with_capacity(instructions.len());
 
@@ -44,7 +42,7 @@ fn infix_simplify_recurse_full(infix: &Infix, parent_precedence: u32) -> Vec<Inf
             let mut result = Vec::with_capacity(10);
             
             let assoc = op.associativity();
-            let precedence = op.precedence() as u32 * 1000;
+            let precedence = op.precedence() as u32 * 2;
 
             let mut left_add = 0;
             let mut right_add = 0;
@@ -75,7 +73,7 @@ fn infix_simplify_recurse_prec(infix: &Infix, parent_precedence: u32) -> Vec<Inf
         Infix::Term(left, op, right) => {
             let mut result = Vec::with_capacity(10);
             
-            let precedence = op.precedence() as u32 * 1000;
+            let precedence = op.precedence() as u32 * 2;
 
             result.append(&mut infix_simplify_recurse_prec(left, precedence));
             result.push(InfixFmtElem::Op(*op));

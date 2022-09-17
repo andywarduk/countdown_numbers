@@ -1,13 +1,14 @@
 pub mod infix;
 pub mod progop;
 pub mod program;
+pub mod duplicates;
 
 use itertools::Itertools;
 use std::cmp::{min, Ordering};
 use colored::*;
 
-use progop::*;
-use program::*;
+use crate::progop::*;
+use crate::program::*;
 
 /// Collection of RPN program to run for a set of numbers
 pub struct Programs {
@@ -234,7 +235,7 @@ fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, o
                     }
 
                     // Commutative check
-                    if inc_commutative || program.commutative_filter() {
+                    if inc_commutative || program.duplicate_filter() {
                         programs.push(program);
                     }
                 }

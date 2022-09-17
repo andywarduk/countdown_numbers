@@ -1,5 +1,6 @@
 use crate::progop::*;
 use crate::infix::*;
+use crate::duplicates::*;
 use colored::*;
 use itertools::Itertools;
 use std::convert;
@@ -98,14 +99,9 @@ impl Program {
         Ok(stack.pop().unwrap())
     }
 
-    /// Returns false if the program contains a calculation which is commutative and would be covered by another program
-    pub fn commutative_filter(&self) -> bool {
-        // Build infix tree based on operator precedence
-        let tree = self.infix_format(InfixSimplifyMode::Prec);
-
-        // TODO Program::commutative_filter_walk(&op_tree)
-
-        true
+    /// Returns false if the program contains a calculation which would be covered by another program
+    pub fn duplicate_filter(&self) -> bool {
+        !duplicated(&self.instructions)
     }
 
     /// Returns the formatted steps of a program for a given set of numbers
