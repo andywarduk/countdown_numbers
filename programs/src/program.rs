@@ -3,6 +3,7 @@ use crate::infix::*;
 use crate::duplicates::*;
 use colored::*;
 use itertools::Itertools;
+use std::collections::VecDeque;
 use std::convert;
 
 /// Holds a single RPN program
@@ -28,6 +29,10 @@ impl Program {
     // Returns the numer of operators in the program
     pub fn len(&self) -> usize {
         self.instructions.len()
+    }
+
+    pub fn instructions(&self) -> &Vec<ProgOp> {
+        &self.instructions
     }
 
     /// Runs the program with a given set of numbers and preallocated stack
@@ -104,6 +109,15 @@ impl Program {
         !duplicated(&self.instructions)
     }
 
+    pub fn duplicated(&self) -> bool {
+        duplicated(&self.instructions)
+    }
+
+    pub fn duplicated_cb<F>(&self, grp_cb: F) -> bool 
+    where F: FnMut(&VecDeque<ProgEntity>) -> bool {
+        duplicated_cb(&self.instructions, grp_cb)
+    }
+
     /// Returns the formatted steps of a program for a given set of numbers
     pub fn steps(&self, numbers: &[u32], colour: bool) -> Vec<String> {
         let mut steps = Vec::new();
@@ -159,8 +173,8 @@ impl Program {
     }
 
     /// Converts the RPN program to infix equation
-    pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
-        self.infix_format(InfixSimplifyMode::Full).colour(colour, numbers)
+    pub fn infix(&self, numbers: &[u32], colour: bool, mode: InfixSimplifyMode) -> String {
+        self.infix_format(mode).colour(colour, numbers)
     }
 
     /// Returns the infix tree for the program

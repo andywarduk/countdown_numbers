@@ -73,11 +73,22 @@ fn infix_simplify_recurse_prec(infix: &Infix, parent_precedence: u32) -> Vec<Inf
         Infix::Term(left, op, right) => {
             let mut result = Vec::with_capacity(10);
             
+            let assoc = op.associativity();
             let precedence = op.precedence() as u32 * 2;
 
-            result.append(&mut infix_simplify_recurse_prec(left, precedence));
+            let mut left_add = 0;
+            let mut right_add = 0;
+
+            if assoc == ProgOpAssoc::Right {
+                left_add = 1;
+            }
+            if assoc == ProgOpAssoc::Left {
+                right_add = 1;
+            }
+
+            result.append(&mut infix_simplify_recurse_prec(left, precedence + left_add));
             result.push(InfixFmtElem::Op(*op));
-            result.append(&mut infix_simplify_recurse_prec(right, precedence));
+            result.append(&mut infix_simplify_recurse_prec(right, precedence + right_add));
 
             if parent_precedence != precedence {
                 result = vec![InfixFmtElem::Term(result)];
@@ -157,56 +168,56 @@ mod tests {
     fn simplify_add() {
         let program: Program = "0 1 2 3 + + +".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 + 2 + 3 + 4");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 + 2 + 3 + 4");
     }
 
     #[test]
     fn simplify_mul() {
         let program: Program = "0 1 2 3 * * *".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 × 2 × 3 × 4");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 × 2 × 3 × 4");
     }
 
     #[test]
     fn simplify_sub_1() {
         let program: Program = "0 1 2 3 - - -".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 - (2 - (3 - 4))");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 - (2 - (3 - 4))");
     }
 
     #[test]
     fn simplify_sub_2() {
         let program: Program = "0 1 - 2 - 3 -".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 - 2 - 3 - 4");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 - 2 - 3 - 4");
     }
 
     #[test]
     fn simplify_div_1() {
         let program: Program = "0 1 2 3 / / /".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 / (2 / (3 / 4))");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 / (2 / (3 / 4))");
     }
 
     #[test]
     fn simplify_div_2() {
         let program: Program = "0 1 / 2 / 3 /".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 / 2 / 3 / 4");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 / 2 / 3 / 4");
     }
 
     #[test]
     fn simplify_3() {
         let program: Program = "0 1 2 + -".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 - (2 + 3)");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 - (2 + 3)");
     }
 
     #[test]
     fn simplify_4() {
         let program: Program = "0 1 - 2 +".into();
 
-        assert_eq!(program.infix(&[1, 2, 3, 4], false), "1 - 2 + 3");
+        assert_eq!(program.infix(&[1, 2, 3, 4], false, InfixSimplifyMode::Full), "1 - 2 + 3");
     }
 
 }

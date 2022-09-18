@@ -61,7 +61,7 @@ fn main() {
                         if num_outputs > 1 {
                             print!("Equation: ");
                         }
-                        println!("{}", s.program_equation(&args.cards));
+                        println!("{}", s.program_infix(&args.cards));
                     }
 
                     if args.output.contains(Output::STEPS) {

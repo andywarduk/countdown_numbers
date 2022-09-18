@@ -216,7 +216,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
             let mut eqn_file = File::create(eqn_file_path).unwrap();
 
             for solution in results.solutions.iter().sorted() {
-                writeln!(&mut eqn_file, "{}", solution.program_equation(numbers)).unwrap();
+                writeln!(&mut eqn_file, "{}", solution.program_infix(numbers)).unwrap();
             }
         }
     }
