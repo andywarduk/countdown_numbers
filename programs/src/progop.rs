@@ -78,27 +78,3 @@ pub enum ProgOpAssoc {
     Right,
     Both
 }
-
-impl ProgOpAssoc {
-
-    fn min(&self, other: &ProgOpAssoc) -> Option<ProgOpAssoc> {
-        match self {
-            ProgOpAssoc::Left => {
-                match other {
-                    ProgOpAssoc::Left | ProgOpAssoc::Both => Some(ProgOpAssoc::Left),
-                    ProgOpAssoc::Right => None
-                }        
-            }
-            ProgOpAssoc::Right => {
-                match other {
-                    ProgOpAssoc::Right | ProgOpAssoc::Both => Some(ProgOpAssoc::Right),
-                    ProgOpAssoc::Left => None
-                }
-            }
-            ProgOpAssoc::Both => {
-                Some(other.clone())
-            }
-        }
-    }
-
-}

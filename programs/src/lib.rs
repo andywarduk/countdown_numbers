@@ -7,7 +7,6 @@ use itertools::Itertools;
 use std::cmp::{min, Ordering};
 use colored::*;
 
-use crate::infix::*;
 use crate::progop::*;
 use crate::program::*;
 
@@ -157,8 +156,8 @@ impl<'a> Solution<'a> {
     }
 
     /// Returns the program equation in infix style
-    pub fn program_infix(&self, numbers: &[u32], mode: InfixSimplifyMode) -> String {
-        format!("{} {} {}", self.program.infix(numbers, true,mode), "=".dimmed(), self.result)
+    pub fn program_infix(&self, numbers: &[u32]) -> String {
+        format!("{} {} {}", self.program.infix(numbers, true), "=".dimmed(), self.result)
     }
 
     /// Returns the program equation in infix style in discrete steps
@@ -394,13 +393,13 @@ mod tests {
 
         println!("1: rpn: {} eqn: {} steps: {}",
             program1.rpn(&numbers, true),
-            program1.infix(&numbers, true, InfixSimplifyMode::Full),
+            program1.infix(&numbers, true),
             program1.steps(&numbers, true).iter().join(", ")
         );
 
         println!("2: rpn: {} eqn: {} steps: {}",
             program2.rpn(&numbers, true),
-            program2.infix(&numbers, true, InfixSimplifyMode::Full),
+            program2.infix(&numbers, true),
             program2.steps(&numbers, true).iter().join(", ")
         );
 
@@ -414,29 +413,29 @@ mod tests {
         let numbers = vec![1, 2, 3, 4];
 
         for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true, InfixSimplifyMode::Full));
+            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true));
         }
 
         assert_eq!(15, programs.len());
 
-        assert_eq!("1", programs.programs[0].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("2", programs.programs[1].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("3", programs.programs[2].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4", programs.programs[3].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("1", programs.programs[0].infix(&numbers, false));
+        assert_eq!("2", programs.programs[1].infix(&numbers, false));
+        assert_eq!("3", programs.programs[2].infix(&numbers, false));
+        assert_eq!("4", programs.programs[3].infix(&numbers, false));
 
-        assert_eq!("2 × 1", programs.programs[4].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("3 × 1", programs.programs[5].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("3 × 2", programs.programs[6].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 × 1", programs.programs[7].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 × 2", programs.programs[8].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 × 3", programs.programs[9].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("2 × 1", programs.programs[4].infix(&numbers, false));
+        assert_eq!("3 × 1", programs.programs[5].infix(&numbers, false));
+        assert_eq!("3 × 2", programs.programs[6].infix(&numbers, false));
+        assert_eq!("4 × 1", programs.programs[7].infix(&numbers, false));
+        assert_eq!("4 × 2", programs.programs[8].infix(&numbers, false));
+        assert_eq!("4 × 3", programs.programs[9].infix(&numbers, false));
 
-        assert_eq!("3 × 2 × 1", programs.programs[10].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 × 2 × 1", programs.programs[11].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 × 3 × 1", programs.programs[12].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 × 3 × 2", programs.programs[13].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("3 × 2 × 1", programs.programs[10].infix(&numbers, false));
+        assert_eq!("4 × 2 × 1", programs.programs[11].infix(&numbers, false));
+        assert_eq!("4 × 3 × 1", programs.programs[12].infix(&numbers, false));
+        assert_eq!("4 × 3 × 2", programs.programs[13].infix(&numbers, false));
 
-        assert_eq!("4 × 3 × 2 × 1", programs.programs[14].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("4 × 3 × 2 × 1", programs.programs[14].infix(&numbers, false));
     }
 
     #[test]
@@ -446,29 +445,29 @@ mod tests {
         let numbers = vec![1, 2, 3, 4];
 
         for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true, InfixSimplifyMode::Full));
+            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true));
         }
 
         assert_eq!(15, programs.len());
 
-        assert_eq!("1", programs.programs[0].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("2", programs.programs[1].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("3", programs.programs[2].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4", programs.programs[3].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("1", programs.programs[0].infix(&numbers, false));
+        assert_eq!("2", programs.programs[1].infix(&numbers, false));
+        assert_eq!("3", programs.programs[2].infix(&numbers, false));
+        assert_eq!("4", programs.programs[3].infix(&numbers, false));
 
-        assert_eq!("2 + 1", programs.programs[4].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("3 + 1", programs.programs[5].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("3 + 2", programs.programs[6].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 + 1", programs.programs[7].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 + 2", programs.programs[8].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 + 3", programs.programs[9].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("2 + 1", programs.programs[4].infix(&numbers, false));
+        assert_eq!("3 + 1", programs.programs[5].infix(&numbers, false));
+        assert_eq!("3 + 2", programs.programs[6].infix(&numbers, false));
+        assert_eq!("4 + 1", programs.programs[7].infix(&numbers, false));
+        assert_eq!("4 + 2", programs.programs[8].infix(&numbers, false));
+        assert_eq!("4 + 3", programs.programs[9].infix(&numbers, false));
 
-        assert_eq!("3 + 2 + 1", programs.programs[10].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 + 2 + 1", programs.programs[11].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 + 3 + 1", programs.programs[12].infix(&numbers, false, InfixSimplifyMode::Full));
-        assert_eq!("4 + 3 + 2", programs.programs[13].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("3 + 2 + 1", programs.programs[10].infix(&numbers, false));
+        assert_eq!("4 + 2 + 1", programs.programs[11].infix(&numbers, false));
+        assert_eq!("4 + 3 + 1", programs.programs[12].infix(&numbers, false));
+        assert_eq!("4 + 3 + 2", programs.programs[13].infix(&numbers, false));
 
-        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].infix(&numbers, false, InfixSimplifyMode::Full));
+        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].infix(&numbers, false));
     }
 
 }

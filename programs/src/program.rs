@@ -31,12 +31,36 @@ impl Program {
         self.instructions.len()
     }
 
+    /// Borrows instructions from the program
     pub fn instructions(&self) -> &Vec<ProgOp> {
         &self.instructions
     }
 
+    /// Processes a program
+    pub fn process<S, N, T>(&self, stack: &mut Vec<S>, mut num_cb: N, mut op_cb: T) -> S 
+    where N: FnMut(u8) -> S,
+          T: FnMut(S, ProgOp, S) -> S {
+        stack.clear();
+
+        for op in &self.instructions {
+            match op {
+                ProgOp::Number(n) => {
+                    stack.push(num_cb(*n))
+                }
+                _ => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+                    stack.push(op_cb(n2, *op, n1))
+                }
+            }
+        }
+    
+        stack.pop().unwrap()
+    }
+    
     /// Runs the program with a given set of numbers and preallocated stack
     pub fn run(&self, numbers: &[u32], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
+        // NB this does not use the process function for speed
         stack.clear();
 
         for op in &self.instructions {
@@ -124,67 +148,47 @@ impl Program {
         let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
         let mut str_stack: Vec<String> = Vec::with_capacity(numbers.len());
 
-        let mut add_step = |op: &ProgOp, ans: u32, stack: &mut Vec<u32>, str_stack: &mut Vec<String>| {
+        self.process(&mut stack, |n| {
+            numbers[n as usize]
+        }, |n2, op, n1| {
+            let ans = match op {
+                ProgOp::OpAdd => n2 + n1,
+                ProgOp::OpSub => n2 - n1,
+                ProgOp::OpMul => n2 * n1,
+                ProgOp::OpDiv => n2 / n1,
+                _ => panic!("Non-operator not expected")
+            };
+
             let n1_str = str_stack.pop().unwrap();
             let n2_str = str_stack.pop().unwrap();
+
             let ans_str = ans.to_string();
 
             let equals = if colour { "=".dimmed().to_string() } else { "=".to_string() };
+
             steps.push(format!("{} {} {} {} {}", n2_str, op.colour(colour, numbers), n1_str, equals, ans_str));
 
-            stack.push(ans);
             str_stack.push(ans_str);
-        };
 
-        for op in &self.instructions {
-            match op {
-                ProgOp::Number(x) => {
-                    stack.push(numbers[*x as usize]);
-                    str_stack.push(op.colour(colour, numbers));
-                },
-                ProgOp::OpAdd => {
-                    let n1 = stack.pop().unwrap();
-                    let n2 = stack.pop().unwrap();
-                    let ans = n2 + n1;
-                    add_step(op, ans, &mut stack, &mut str_stack);
-                },
-                ProgOp::OpSub => {
-                    let n1 = stack.pop().unwrap();
-                    let n2 = stack.pop().unwrap();
-                    let ans = n2 - n1;
-                    add_step(op, ans, &mut stack, &mut str_stack);
-                },
-                ProgOp::OpMul => {
-                    let n1 = stack.pop().unwrap();
-                    let n2 = stack.pop().unwrap();
-                    let ans = n2 * n1;
-                    add_step(op, ans, &mut stack, &mut str_stack);
-                },
-                ProgOp::OpDiv => {
-                    let n1 = stack.pop().unwrap();
-                    let n2 = stack.pop().unwrap();
-                    let ans = n2 / n1;
-                    add_step(op, ans, &mut stack, &mut str_stack);
-                },
-            }
-        }
+            ans
+        });
 
         steps
     }
 
     /// Converts the RPN program to infix equation
-    pub fn infix(&self, numbers: &[u32], colour: bool, mode: InfixSimplifyMode) -> String {
-        self.infix_format(mode).colour(colour, numbers)
+    pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
+        self.infix_format().colour(colour, numbers)
     }
 
     /// Returns the infix tree for the program
     pub fn infix_tree(&self) -> Infix {
-        build_infix_tree(&self.instructions)
+        program_infixtree(&self)
     }
 
     /// Returns the simplified infix tree for the program
-    pub fn infix_format(&self, mode: InfixSimplifyMode) -> InfixFmtElem {
-        infix_simplify(&self.infix_tree(), mode)
+    pub fn infix_format(&self) -> InfixGrpElem {
+        infix_simplify(&self.infix_tree())
     }
 
     /// Converts the RPN program to a string for a given set of numbers

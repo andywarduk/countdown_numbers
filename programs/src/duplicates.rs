@@ -118,15 +118,14 @@ fn check_terms(terms: &VecDeque<ProgEntity>) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use crate::infix::*;
     use super::*;
 
     fn test_int(rpn: &str, numbers: &[u32], expected_infix: &str, expected_answer: u32, expected_groups: usize, expected_duplicate: bool) {
         let program: Program = rpn.into();
 
-        println!("RPN: {}, infix (full): {}, infix (precedence): {}", rpn,
-            program.infix(numbers, false, InfixSimplifyMode::Full),
-            program.infix(numbers, false, InfixSimplifyMode::Prec),
+        println!("RPN: {}, infix: {}",
+            rpn,
+            program.infix(numbers, false),
         );
 
         let mut stack = Vec::new();
@@ -135,7 +134,7 @@ mod tests {
 
         assert_eq!(result, expected_answer);
 
-        assert_eq!(expected_infix, program.infix(numbers, false, InfixSimplifyMode::Full));
+        assert_eq!(expected_infix, program.infix(numbers, false));
 
         let mut groups = Vec::new();
 
