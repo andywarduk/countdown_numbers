@@ -5,6 +5,7 @@ pub mod duplicates;
 
 use itertools::Itertools;
 use std::cmp::{min, Ordering};
+use std::collections::HashSet;
 use colored::*;
 
 use crate::progop::*;
@@ -205,6 +206,8 @@ impl<'a> PartialEq for Solution<'a> {
 // Support functions
 
 fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>, inc_commutative: bool) {
+    let mut set = HashSet::new();
+
     for nums in (0..nums).permutations(num_cnt) {
         if num_cnt == 1 {
             let mut program = Program::new(num_cnt);
@@ -235,7 +238,7 @@ fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, o
                     }
 
                     // Commutative check
-                    if inc_commutative || program.duplicate_filter() {
+                    if inc_commutative || program.duplicate_filter(&mut set) {
                         programs.push(program);
                     }
                 }
@@ -304,170 +307,4 @@ fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: usize, slots:
     for op in operators.iter() {
         add(*op);
     }
-}
-
-// Tests
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn prog_add() {
-        let mut stack: Vec<u32> = Vec::new();
-        let mut program = Program::new(2);
-
-        program.push(ProgOp::Number(0));
-        program.push(ProgOp::Number(1));
-        program.push(ProgOp::OpAdd);
-
-        assert_eq!(Ok(7), program.run(&[3, 4], &mut stack));
-    }
-
-    #[test]
-    fn prog_sub() {
-        let mut stack: Vec<u32> = Vec::new();
-        let mut program = Program::new(2);
-
-        program.push(ProgOp::Number(0));
-        program.push(ProgOp::Number(1));
-        program.push(ProgOp::OpSub);
-
-        assert_eq!(Ok(4), program.run(&[7, 3], &mut stack));
-        assert_eq!(Err(ProgErr::Zero), program.run(&[3, 3], &mut stack));
-        assert_eq!(Err(ProgErr::Negative), program.run(&[3, 4], &mut stack));
-    }
-
-    #[test]
-    fn prog_mul() {
-        let mut stack: Vec<u32> = Vec::new();
-        let mut program = Program::new(2);
-
-        program.push(ProgOp::Number(0));
-        program.push(ProgOp::Number(1));
-        program.push(ProgOp::OpMul);
-
-        assert_eq!(Ok(21), program.run(&[7, 3], &mut stack));
-        assert_eq!(Err(ProgErr::Mul1), program.run(&[7, 1], &mut stack));
-        assert_eq!(Err(ProgErr::Mul1), program.run(&[1, 3], &mut stack));
-        assert_eq!(Err(ProgErr::Zero), program.run(&[7, 0], &mut stack));
-        assert_eq!(Err(ProgErr::Zero), program.run(&[0, 3], &mut stack));
-        assert_eq!(Err(ProgErr::Zero), program.run(&[0, 0], &mut stack));
-    }
-
-    #[test]
-    fn prog_div() {
-        let mut stack: Vec<u32> = Vec::new();
-        let mut program = Program::new(2);
-
-        program.push(ProgOp::Number(0));
-        program.push(ProgOp::Number(1));
-        program.push(ProgOp::OpDiv);
-
-        assert_eq!(Ok(4), program.run(&[12, 3], &mut stack));
-        assert_eq!(Err(ProgErr::NonInteger), program.run(&[13, 3], &mut stack));
-        assert_eq!(Err(ProgErr::DivZero), program.run(&[3, 0], &mut stack));
-        assert_eq!(Err(ProgErr::Div1), program.run(&[3, 1], &mut stack));
-    }
-
-    #[test]
-    fn eqn_test() {
-        let mut program1 = Program::new(3);
-        let mut program2 = Program::new(3);
-
-        // 25 5 100 + -
-        program1.push(ProgOp::Number(0));
-        program1.push(ProgOp::Number(1));
-        program1.push(ProgOp::Number(2));
-        program1.push(ProgOp::OpAdd);
-        program1.push(ProgOp::OpSub);
-
-        // 25 5 - 100 +
-        program2.push(ProgOp::Number(0));
-        program2.push(ProgOp::Number(1));
-        program2.push(ProgOp::OpSub);
-        program2.push(ProgOp::Number(2));
-        program2.push(ProgOp::OpAdd);
-
-        let numbers = [25, 5, 4];
-
-        println!("1: rpn: {} eqn: {} steps: {}",
-            program1.rpn(&numbers, true),
-            program1.infix(&numbers, true),
-            program1.steps(&numbers, true).iter().join(", ")
-        );
-
-        println!("2: rpn: {} eqn: {} steps: {}",
-            program2.rpn(&numbers, true),
-            program2.infix(&numbers, true),
-            program2.steps(&numbers, true).iter().join(", ")
-        );
-
-        assert!(1==0);
-    }
-
-    #[test]
-    fn commutative_filter_test_mul() {
-        let programs = Programs::new_with_operators(4, false, vec![ProgOp::OpMul]);
-
-        let numbers = vec![1, 2, 3, 4];
-
-        for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true));
-        }
-
-        assert_eq!(15, programs.len());
-
-        assert_eq!("1", programs.programs[0].infix(&numbers, false));
-        assert_eq!("2", programs.programs[1].infix(&numbers, false));
-        assert_eq!("3", programs.programs[2].infix(&numbers, false));
-        assert_eq!("4", programs.programs[3].infix(&numbers, false));
-
-        assert_eq!("2 × 1", programs.programs[4].infix(&numbers, false));
-        assert_eq!("3 × 1", programs.programs[5].infix(&numbers, false));
-        assert_eq!("3 × 2", programs.programs[6].infix(&numbers, false));
-        assert_eq!("4 × 1", programs.programs[7].infix(&numbers, false));
-        assert_eq!("4 × 2", programs.programs[8].infix(&numbers, false));
-        assert_eq!("4 × 3", programs.programs[9].infix(&numbers, false));
-
-        assert_eq!("3 × 2 × 1", programs.programs[10].infix(&numbers, false));
-        assert_eq!("4 × 2 × 1", programs.programs[11].infix(&numbers, false));
-        assert_eq!("4 × 3 × 1", programs.programs[12].infix(&numbers, false));
-        assert_eq!("4 × 3 × 2", programs.programs[13].infix(&numbers, false));
-
-        assert_eq!("4 × 3 × 2 × 1", programs.programs[14].infix(&numbers, false));
-    }
-
-    #[test]
-    fn commutative_filter_test_add() {
-        let programs = Programs::new_with_operators(4, false, vec![ProgOp::OpAdd]);
-
-        let numbers = vec![1, 2, 3, 4];
-
-        for p in &programs.programs {
-            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true));
-        }
-
-        assert_eq!(15, programs.len());
-
-        assert_eq!("1", programs.programs[0].infix(&numbers, false));
-        assert_eq!("2", programs.programs[1].infix(&numbers, false));
-        assert_eq!("3", programs.programs[2].infix(&numbers, false));
-        assert_eq!("4", programs.programs[3].infix(&numbers, false));
-
-        assert_eq!("2 + 1", programs.programs[4].infix(&numbers, false));
-        assert_eq!("3 + 1", programs.programs[5].infix(&numbers, false));
-        assert_eq!("3 + 2", programs.programs[6].infix(&numbers, false));
-        assert_eq!("4 + 1", programs.programs[7].infix(&numbers, false));
-        assert_eq!("4 + 2", programs.programs[8].infix(&numbers, false));
-        assert_eq!("4 + 3", programs.programs[9].infix(&numbers, false));
-
-        assert_eq!("3 + 2 + 1", programs.programs[10].infix(&numbers, false));
-        assert_eq!("4 + 2 + 1", programs.programs[11].infix(&numbers, false));
-        assert_eq!("4 + 3 + 1", programs.programs[12].infix(&numbers, false));
-        assert_eq!("4 + 3 + 2", programs.programs[13].infix(&numbers, false));
-
-        assert_eq!("4 + 3 + 2 + 1", programs.programs[14].infix(&numbers, false));
-    }
-
 }

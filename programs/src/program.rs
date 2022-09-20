@@ -3,7 +3,7 @@ use crate::infix::*;
 use crate::duplicates::*;
 use colored::*;
 use itertools::Itertools;
-use std::collections::VecDeque;
+use std::collections::HashSet;
 use std::convert;
 
 /// Holds a single RPN program
@@ -129,28 +129,27 @@ impl Program {
     }
 
     /// Returns false if the program contains a calculation which would be covered by another program
-    pub fn duplicate_filter(&self) -> bool {
-        !duplicated(&self.instructions)
-    }
-
-    pub fn duplicated(&self) -> bool {
-        duplicated(&self.instructions)
-    }
-
-    pub fn duplicated_cb<F>(&self, grp_cb: F) -> bool 
-    where F: FnMut(&VecDeque<ProgEntity>) -> bool {
-        duplicated_cb(&self.instructions, grp_cb)
+    pub fn duplicate_filter(&self, set: &mut HashSet<Vec<InfixGrpElem>>) -> bool {
+        if let Ok(infixgrp) = duplicated(&self) {
+            if set.contains(&infixgrp) {
+                false
+            } else {
+                set.insert(infixgrp.clone());
+                true
+            }
+        } else {
+            false
+        }
     }
 
     /// Returns the formatted steps of a program for a given set of numbers
     pub fn steps(&self, numbers: &[u32], colour: bool) -> Vec<String> {
         let mut steps = Vec::new();
-        let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
-        let mut str_stack: Vec<String> = Vec::with_capacity(numbers.len());
+        let mut stack: Vec<(u32, String)> = Vec::with_capacity(numbers.len());
 
         self.process(&mut stack, |n| {
-            numbers[n as usize]
-        }, |n2, op, n1| {
+            (numbers[n as usize], ProgOp::Number(n).colour(colour, numbers)) 
+        }, |(n2, s2), op, (n1, s1)| {
             let ans = match op {
                 ProgOp::OpAdd => n2 + n1,
                 ProgOp::OpSub => n2 - n1,
@@ -159,18 +158,13 @@ impl Program {
                 _ => panic!("Non-operator not expected")
             };
 
-            let n1_str = str_stack.pop().unwrap();
-            let n2_str = str_stack.pop().unwrap();
-
             let ans_str = ans.to_string();
 
             let equals = if colour { "=".dimmed().to_string() } else { "=".to_string() };
 
-            steps.push(format!("{} {} {} {} {}", n2_str, op.colour(colour, numbers), n1_str, equals, ans_str));
+            steps.push(format!("{} {} {} {} {}", s2, op.colour(colour, numbers), s1, equals, ans_str));
 
-            str_stack.push(ans_str);
-
-            ans
+            (ans, ans_str)
         });
 
         steps
@@ -178,17 +172,8 @@ impl Program {
 
     /// Converts the RPN program to infix equation
     pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
-        self.infix_format().colour(colour, numbers)
-    }
-
-    /// Returns the infix tree for the program
-    pub fn infix_tree(&self) -> Infix {
-        program_infixtree(&self)
-    }
-
-    /// Returns the simplified infix tree for the program
-    pub fn infix_format(&self) -> InfixGrpElem {
-        infix_simplify(&self.infix_tree())
+        let infix = program_infixtree(&self);
+        infix_simplify(&infix).colour(colour, numbers)
     }
 
     /// Converts the RPN program to a string for a given set of numbers
@@ -246,4 +231,54 @@ pub enum ProgErr {
     Mul1,       
     /// Program encountered divide by 1 (noop)
     Div1,       
+}
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prog_add() {
+        let program: Program = "0 1 +".into();
+        let mut stack: Vec<u32> = Vec::new();
+
+        assert_eq!(Ok(7), program.run(&[3, 4], &mut stack));
+    }
+
+    #[test]
+    fn prog_sub() {
+        let program: Program = "0 1 -".into();
+        let mut stack: Vec<u32> = Vec::new();
+
+        assert_eq!(Ok(4), program.run(&[7, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[3, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Negative), program.run(&[3, 4], &mut stack));
+    }
+
+    #[test]
+    fn prog_mul() {
+        let program: Program = "0 1 *".into();
+        let mut stack: Vec<u32> = Vec::new();
+
+        assert_eq!(Ok(21), program.run(&[7, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Mul1), program.run(&[7, 1], &mut stack));
+        assert_eq!(Err(ProgErr::Mul1), program.run(&[1, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[7, 0], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[0, 3], &mut stack));
+        assert_eq!(Err(ProgErr::Zero), program.run(&[0, 0], &mut stack));
+    }
+
+    #[test]
+    fn prog_div() {
+        let program: Program = "0 1 /".into();
+        let mut stack: Vec<u32> = Vec::new();
+
+        assert_eq!(Ok(4), program.run(&[12, 3], &mut stack));
+        assert_eq!(Err(ProgErr::NonInteger), program.run(&[13, 3], &mut stack));
+        assert_eq!(Err(ProgErr::DivZero), program.run(&[3, 0], &mut stack));
+        assert_eq!(Err(ProgErr::Div1), program.run(&[3, 1], &mut stack));
+    }
+
 }

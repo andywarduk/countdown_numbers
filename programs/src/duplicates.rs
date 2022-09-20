@@ -1,118 +1,75 @@
-use std::collections::VecDeque;
-use std::sync::Mutex;
-use lazy_static::*;
+use crate::program::*;
 use crate::progop::*;
+use crate::infix::*;
 
-lazy_static! {
-    static ref STACK: Mutex<Vec<ProgEntity>> = Mutex::new(Vec::new());
+pub fn duplicated(program: &Program) -> Result<Vec<InfixGrpElem>, ()> {
+    let infix = program_infixtree(program);
+    duplicated_infix(&infix)
 }
 
-#[derive(Debug)]
-pub enum ProgEntity {
-    Card(u8),
-    Group(ProgOpAssoc, u8, VecDeque<ProgEntity>),
-}
+fn duplicated_infix(infix: &Infix) -> Result<Vec<InfixGrpElem>, ()> {
+    infix_group(infix, &mut |grp| {
+        // Returns true if :
+        // 1. Numbers for a group of operators are not in ascending order
+        // 2. Terms must follow numbers
+        // 3. Operators must appear in the order * / + -
 
-pub fn duplicated(instructions: &[ProgOp]) -> bool {
-    duplicated_cb(instructions, check_terms)
-}
+        let mut cur_op_ord = 0;
+        let mut cur_num = None;
+        let mut in_terms = false;
 
-pub fn duplicated_cb<F>(instructions: &[ProgOp], mut grp_cb: F) -> bool 
-where F: FnMut(&VecDeque<ProgEntity>) -> bool {
-    let mut stack = STACK.lock().unwrap();
-
-    for op in instructions {
-        match op {
-            ProgOp::Number(x) => stack.push(ProgEntity::Card(*x)),
-            _ => {
-                // An operator
-                let assoc = op.associativity();
-                let prec = op.precedence();
-
-                let n1 = stack.pop().unwrap();
-                let n2 = stack.pop().unwrap();
-
-                match n2 {
-                    ProgEntity::Card(c2) => {
-                        match n1 {
-                            ProgEntity::Card(c1) => {
-                                // c2 + c1
-                                let mut vec = VecDeque::with_capacity(8);
-                                vec.push_back(ProgEntity::Card(c2));
-                                vec.push_back(ProgEntity::Card(c1));
-                                stack.push(ProgEntity::Group(assoc, prec, vec));
-                            }
-                            ProgEntity::Group(assoc1, prec1, mut terms1) => {
-                                if prec == prec1 && (assoc == ProgOpAssoc::Both || assoc == ProgOpAssoc::Right) {
-                                    // c2 + grp with same prec - add to front of group
-                                    terms1.push_front(ProgEntity::Card(c2));
-                                    stack.push(ProgEntity::Group(assoc, prec, terms1))
-                                } else {
-                                    // c2 + grp with different prec
-                                    if !grp_cb(&terms1) { return true };
-                                    let mut vec = VecDeque::with_capacity(8);
-                                    vec.push_back(ProgEntity::Card(c2));
-                                    vec.push_back(ProgEntity::Group(assoc1, prec1, terms1));
-                                    stack.push(ProgEntity::Group(assoc, prec, vec));
-                                }
-                            }
+        for e in grp {
+            match e {
+                InfixGrpElem::Number(n) => {
+                    if let Some(cur) = cur_num {
+                        if n < cur || in_terms {
+                            return false;
                         }
-                    }
-                    ProgEntity::Group(assoc2, prec2, mut terms2) => {
-                        match n1 {
-                            ProgEntity::Card(c1) => {
-                                if prec == prec2 && (assoc2 == ProgOpAssoc::Both || assoc2 == ProgOpAssoc::Left) {
-                                    // grp2 with same prec and compatible assoc + c1 - append to group
-                                    terms2.push_back(ProgEntity::Card(c1));
-                                    stack.push(ProgEntity::Group(assoc, prec, terms2))
-                                } else {
-                                    // grp2 with different prec or incompatible assoc + c1
-                                    if !grp_cb(&terms2) { return true };
-                                    let mut vec = VecDeque::with_capacity(8);
-                                    vec.push_back(ProgEntity::Group(assoc2, prec2, terms2));
-                                    vec.push_back(ProgEntity::Card(c1));
-                                    stack.push(ProgEntity::Group(assoc, prec, vec));
-                                }
-                            }
-                            ProgEntity::Group(assoc1, prec1, mut terms1) => {
-                                if prec1 == prec2 && prec1 == prec {
-                                    // grp2 + grp1 with same prec
-                                    let mut terms = VecDeque::with_capacity(8);
-                                    terms.append(&mut terms2);
-                                    terms.append(&mut terms1);
-                                    stack.push(ProgEntity::Group(assoc, prec, terms));
-                                } else {
-                                    // grp2 + grp1 with different assoc / prec
-                                    if !grp_cb(&terms1) { return true };
-                                    if !grp_cb(&terms2) { return true };
-                                    let mut terms = VecDeque::with_capacity(8);
-                                    terms.push_front(ProgEntity::Group(assoc2, prec2, terms2));
-                                    terms.push_front(ProgEntity::Group(assoc1, prec1, terms1));
-                                    stack.push(ProgEntity::Group(assoc, prec, terms));
-                                }
-                            }
+                        cur_num = Some(n)
+                    } else {
+                        // First number
+                        if in_terms {
+                            return false;
                         }
+                        cur_num = Some(n)
                     }
+                }
+                InfixGrpElem::Op(op) => {
+                    let ord = op_order(op);
+
+                    if ord != cur_op_ord {
+                        // Operator changed
+                        if ord < cur_op_ord {
+                            return false;
+                        }
+
+                        if cur_op_ord != 0 {
+                            cur_num = None;
+                            in_terms = false;
+                        }
+
+                        cur_op_ord = ord;
+                    }
+                }
+                InfixGrpElem::Term(_) => {
+                    in_terms = true;
                 }
             }
         }
-    }
 
-    match stack.pop().unwrap() {
-        ProgEntity::Group(_, _, terms) => {
-            if !grp_cb(&terms) { return true };
-        }
-        _ => {}
-    }
-
-    false
+        true
+    })
 }
 
-fn check_terms(terms: &VecDeque<ProgEntity>) -> bool {
-    // TODO
-    println!("{:?}", terms);
-
-    true
+#[inline]
+fn op_order(op: &ProgOp) -> usize {
+    match *op {
+        ProgOp::OpMul => 1,
+        ProgOp::OpDiv => 2,
+        ProgOp::OpAdd => 3,
+        ProgOp::OpSub => 4,
+        _ => panic!("Not expected")
+    }
 }
 
 #[cfg(test)]
@@ -120,127 +77,131 @@ mod tests {
     use crate::*;
     use super::*;
 
-    fn test_int(rpn: &str, numbers: &[u32], expected_infix: &str, expected_answer: u32, expected_groups: usize, expected_duplicate: bool) {
+    fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: bool) {
+        // Create program
         let program: Program = rpn.into();
 
-        println!("RPN: {}, infix: {}",
+        // Get infix tree
+        let infix_tree = program_infixtree(&program);
+
+        // Get infix groups
+        let elems: Vec<u32> = (0..numbers.len()).map(|i| i as u32).collect();
+
+        let mut groups = Vec::new();
+
+        assert!(infix_group(&infix_tree, &mut |grp| {
+            groups.push(format!("{}", grp.iter().map(|e| e.colour(false, &elems)).join(" ")));
+            true
+        }).is_ok());
+
+        // Get simplified infix string
+        let infix = infix_simplify(&infix_tree).colour(false, numbers);
+
+        // Is a duplicate?
+        let duplicate = duplicated(&program).is_err();
+
+        println!("RPN: {}, infix: {}, dup : {}, groups: {}",
             rpn,
-            program.infix(numbers, false),
+            infix,
+            duplicate,
+            groups.iter().join(", ")
         );
 
+        // Run the program
         let mut stack = Vec::new();
 
         let result = program.run(numbers, &mut stack).unwrap();
 
-        assert_eq!(result, expected_answer);
+        // Check answer
+        assert_eq!(result, exp_ans);
 
-        assert_eq!(expected_infix, program.infix(numbers, false));
+        // Check infix
+        assert_eq!(exp_infix, infix);
 
-        let mut groups = Vec::new();
+        // Check groups
+        assert_eq!(groups.len(), exp_grps);
 
-        let callback = |terms: &VecDeque<ProgEntity>| -> bool {
-            groups.push(format!("{:?}", terms));
-            true
-        };
-
-        assert_eq!(duplicated_cb(program.instructions(), callback), false);
-
-        assert_eq!(groups.len(), expected_groups);
-
-        // TODO assert_eq!(program.duplicated(), expected_duplicate);
+        // Check if expected to to duplicated
+        assert_eq!(duplicate, exp_dup);
     }
 
     #[test]
     fn test1() {
         test_int("0 1 +", &[10, 20], "10 + 20", 30, 1, false);
+        test_int("1 0 +", &[10, 20], "20 + 10", 30, 1, true);
+
+        test_int("0 1 + 2 +", &[10, 20, 30], "10 + 20 + 30", 60, 1, false);
+        test_int("0 2 + 1 +", &[10, 20, 30], "10 + 30 + 20", 60, 1, true);
+        test_int("1 0 + 2 +", &[10, 20, 30], "20 + 10 + 30", 60, 1, true);
+        test_int("1 2 + 0 +", &[10, 20, 30], "20 + 30 + 10", 60, 1, true);
+        test_int("2 0 + 1 +", &[10, 20, 30], "30 + 10 + 20", 60, 1, true);
+        test_int("2 1 + 0 +", &[10, 20, 30], "30 + 20 + 10", 60, 1, true);
+
+        test_int("0 1 -", &[20, 15], "20 - 15", 5, 1, false);
+        test_int("1 0 -", &[30, 50], "50 - 30", 20, 1, true);
+
+        test_int("0 1 - 2 -", &[50, 10, 20], "50 - 10 - 20", 20, 1, false);
+        test_int("0 2 - 1 -", &[50, 10, 20], "50 - 20 - 10", 20, 1, true);
+        test_int("1 0 - 2 -", &[10, 50, 20], "50 - 10 - 20", 20, 1, true);
+        test_int("1 2 - 0 -", &[10, 50, 20], "50 - 20 - 10", 20, 1, true);
+        test_int("2 0 - 1 -", &[10, 20, 50], "50 - 10 - 20", 20, 1, true);
+        test_int("2 1 - 0 -", &[10, 20, 50], "50 - 20 - 10", 20, 1, true);
+
+        // (0 - 1) + 2 == 0 - 1 + 2 == 1
+        test_int("2 1 - 0 +", &[5, 10, 30], "30 - 10 + 5", 25, 1, true);
+
+        // 0 - (1 + 2) == -3 == 0 - 1 + 2 == 1
+        test_int("0 1 2 + -", &[100, 10, 30], "100 - (10 + 30)", 60, 2, false);
+
+        // (0 + 1) + (2 + 3) == 0 + 1 + 2 + 3
+        test_int("0 1 + 2 3 + +", &[2, 3, 5, 7], "2 + 3 + 5 + 7", 17, 1, false);
+
+        // (0 - 1) + (2 + 3) == 0 - 1 + 2 + 3
+        test_int("0 1 - 2 3 + +", &[5, 2, 6, 7], "5 - 2 + 6 + 7", 16, 1, true);
+
+        // (0 + 1) - (2 + 3) == 0 + 1 - (2 + 3)
+        test_int("0 1 + 2 3 + -", &[5, 11, 6, 7], "5 + 11 - (6 + 7)", 3, 2, false);
+
+        // (0 + 1) + (2 - 3) == 0 + 1 + 2 - 3
+        test_int("0 1 + 2 3 - +", &[5, 11, 9, 7], "5 + 11 + 9 - 7", 18, 1, false);
+
+        // (0 - 1) - (2 + 3)
+        test_int("0 1 - 2 3 + -", &[20, 5, 7, 3], "20 - 5 - (7 + 3)", 5, 2, false);
+
+        // (0 - 1) - (2 + 3)
+        test_int("0 1 * 2 / 3 + 4 -", &[20, 30, 10, 7, 5], "20 × 30 / 10 + 7 - 5", 62, 1, false);
     }
 
     #[test]
     fn test2() {
-        test_int("1 0 +", &[10, 20], "20 + 10", 30, 1, true);
-    }
+        let programs = Programs::new_with_operators(4, false, vec![ProgOp::OpAdd]);
 
-    #[test]
-    fn test3() {
-        test_int("0 1 + 2 +", &[10, 20, 30], "10 + 20 + 30", 60, 1, false);
-    }
+        let numbers = vec![0, 1, 2, 3];
 
-    #[test]
-    fn test4() {
-        test_int("0 2 + 1 +", &[10, 20, 30], "10 + 30 + 20", 60, 1, true);
-    }
+        for p in &programs.programs {
+            println!("RPN: {}  Equation: {}", p.rpn(&numbers, true), p.infix(&numbers, true));
+        }
 
-    #[test]
-    fn test5() {
-        test_int("1 0 + 2 +", &[10, 20, 30], "20 + 10 + 30", 60, 1, true);
-    }
+        assert_eq!(15, programs.len());
 
-    #[test]
-    fn test6() {
-        test_int("1 2 + 0 +", &[10, 20, 30], "20 + 30 + 10", 60, 1, true);
-    }
+        assert_eq!("0", programs.programs[0].infix(&numbers, false));
+        assert_eq!("1", programs.programs[1].infix(&numbers, false));
+        assert_eq!("2", programs.programs[2].infix(&numbers, false));
+        assert_eq!("3", programs.programs[3].infix(&numbers, false));
 
-    #[test]
-    fn test7() {
-        test_int("2 0 + 1 +", &[10, 20, 30], "30 + 10 + 20", 60, 1, true);
-    }
+        assert_eq!("0 + 1", programs.programs[4].infix(&numbers, false));
+        assert_eq!("0 + 2", programs.programs[5].infix(&numbers, false));
+        assert_eq!("0 + 3", programs.programs[6].infix(&numbers, false));
+        assert_eq!("1 + 2", programs.programs[7].infix(&numbers, false));
+        assert_eq!("1 + 3", programs.programs[8].infix(&numbers, false));
+        assert_eq!("2 + 3", programs.programs[9].infix(&numbers, false));
 
-    #[test]
-    fn test8() {
-        test_int("2 1 + 0 +", &[10, 20, 30], "30 + 20 + 10", 60, 1, true);
-    }
+        assert_eq!("0 + 1 + 2", programs.programs[10].infix(&numbers, false));
+        assert_eq!("0 + 1 + 3", programs.programs[11].infix(&numbers, false));
+        assert_eq!("0 + 2 + 3", programs.programs[12].infix(&numbers, false));
+        assert_eq!("1 + 2 + 3", programs.programs[13].infix(&numbers, false));
 
-    #[test]
-    fn test9() {
-        test_int("0 1 -", &[20, 15], "20 - 15", 5, 1, false);
-    }
-
-    #[test]
-    fn test10() {
-        test_int("1 0 -", &[30, 50], "50 - 30", 20, 1, false);
-    }
-
-    #[test]
-    fn testgrp1() {
-        // (0 - 1) + 2 == 0 - 1 + 2 == 1
-        test_int("2 1 - 0 +", &[5, 10, 30], "30 - 10 + 5", 25, 1, true);
-    }
-
-    #[test]
-    fn testgrp2() {
-        // 0 - (1 + 2) == -3 == 0 - 1 + 2 == 1
-        test_int("0 1 2 + -", &[100, 10, 30], "100 - (10 + 30)", 60, 2, false);
-    }
-
-    #[test]
-    fn testgrp3() {
-        // (0 + 1) + (2 + 3) == 0 + 1 + 2 + 3
-        test_int("0 1 + 2 3 + +", &[2, 3, 5, 7], "2 + 3 + 5 + 7", 17, 1, false);
-    }
-
-    #[test]
-    fn testgrp4() {
-        // (0 - 1) + (2 + 3) == 0 - 1 + 2 + 3
-        test_int("0 1 - 2 3 + +", &[5, 2, 6, 7], "5 - 2 + 6 + 7", 16, 1, false);
-    }
-
-    #[test]
-    fn testgrp5() {
-        // TODO
-        // (0 + 1) - (2 + 3) == 0 + 1 - (2 + 3)
-        test_int("0 1 + 2 3 + -", &[5, 11, 6, 7], "5 + 11 - (6 + 7)", 3, 2, false);
-    }
-
-    #[test]
-    fn testgrp6() {
-        // (0 + 1) + (2 - 3) == 0 + 1 + 2 - 3
-        test_int("0 1 + 2 3 - +", &[5, 11, 9, 7], "5 + 11 + 9 - 7", 18, 1, false);
-    }
-
-    #[test]
-    fn testgrp7() {
-        // (0 - 1) - (2 + 3)
-        test_int("0 1 - 2 3 + -", &[20, 5, 7, 3], "20 - 5 - (7 + 3)", 5, 2, false);
+        assert_eq!("0 + 1 + 2 + 3", programs.programs[14].infix(&numbers, false));
     }
 
 }

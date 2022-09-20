@@ -11,7 +11,7 @@ pub enum Infix {
 }
 
 pub fn program_infixtree(program: &Program) -> Infix {
-    let mut stack: Vec<Infix> = Vec::new();
+    let mut stack: Vec<Infix> = Vec::with_capacity(program.len());
 
     program.process(&mut stack, |n| {
         Infix::Number(n)
@@ -20,6 +20,7 @@ pub fn program_infixtree(program: &Program) -> Infix {
     })
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum InfixGrpElem {
     Number(u8),
     Op(ProgOp),
@@ -50,9 +51,9 @@ impl InfixGrpElem {
 
 }
 
-pub fn infix_group<F>(infix: &Infix, cb: F) -> Result<Vec<InfixGrpElem>, ()>
-where F: Fn(&Vec<InfixGrpElem>) -> bool {
-    let grp = infix_group_recurse(infix, &cb, 0)?;
+pub fn infix_group<F>(infix: &Infix, cb: &mut F) -> Result<Vec<InfixGrpElem>, ()>
+where F: FnMut(&Vec<InfixGrpElem>) -> bool {
+    let grp = infix_group_recurse(infix, cb, 0)?;
 
     if cb(&grp) { 
         Ok(grp)
@@ -61,8 +62,8 @@ where F: Fn(&Vec<InfixGrpElem>) -> bool {
     }
 }
 
-fn infix_group_recurse<F>(infix: &Infix, cb: &F, parent_precedence: u32) -> Result<Vec<InfixGrpElem>, ()>
-where F: Fn(&Vec<InfixGrpElem>) -> bool {
+fn infix_group_recurse<F>(infix: &Infix, cb: &mut F, parent_precedence: u32) -> Result<Vec<InfixGrpElem>, ()>
+where F: FnMut(&Vec<InfixGrpElem>) -> bool {
     match infix {
         Infix::Number(n) => Ok(vec![InfixGrpElem::Number(*n)]),
         Infix::Term(left, op, right) => {
@@ -96,7 +97,7 @@ where F: Fn(&Vec<InfixGrpElem>) -> bool {
 }
 
 pub fn infix_simplify(infix: &Infix) -> InfixGrpElem {
-    InfixGrpElem::Term(infix_group(infix, |_| true).unwrap())
+    InfixGrpElem::Term(infix_group(infix, &mut |_| true).unwrap())
 }
 
 // Tests
