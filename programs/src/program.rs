@@ -171,9 +171,9 @@ impl Program {
     }
 
     /// Converts the RPN program to infix equation
-    pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
+    pub fn infix(&self, numbers: &[u32], mode: InfixGrpMode, colour: bool) -> String {
         let infix = program_infixtree(&self);
-        infix_simplify(&infix).colour(colour, numbers)
+        infix_simplify(&infix, mode).colour(colour, numbers)
     }
 
     /// Converts the RPN program to a string for a given set of numbers

@@ -10,6 +10,7 @@ use colored::*;
 
 use crate::progop::*;
 use crate::program::*;
+use crate::infix::*;
 
 /// Collection of RPN program to run for a set of numbers
 pub struct Programs {
@@ -157,8 +158,8 @@ impl<'a> Solution<'a> {
     }
 
     /// Returns the program equation in infix style
-    pub fn program_infix(&self, numbers: &[u32]) -> String {
-        format!("{} {} {}", self.program.infix(numbers, true), "=".dimmed(), self.result)
+    pub fn program_infix(&self, numbers: &[u32], mode: InfixGrpMode) -> String {
+        format!("{} {} {}", self.program.infix(numbers, mode, true), "=".dimmed(), self.result)
     }
 
     /// Returns the program equation in infix style in discrete steps

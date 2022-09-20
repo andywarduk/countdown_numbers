@@ -1,6 +1,3 @@
-use programs::{Programs};
-use cards::{get_default_cards, get_special_cards};
-
 use std::collections::VecDeque;
 use std::path::Path;
 use std::collections::HashSet;
@@ -12,6 +9,10 @@ use std::sync::{Mutex, Arc};
 use std::thread;
 use itertools::Itertools;
 use clap::Parser;
+
+use programs::*;
+use programs::infix::*;
+use cards::{get_default_cards, get_special_cards};
 
 // Structure to hold parsed command line arguments
 
@@ -216,7 +217,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
             let mut eqn_file = File::create(eqn_file_path).unwrap();
 
             for solution in results.solutions.iter().sorted() {
-                writeln!(&mut eqn_file, "{}", solution.program_infix(numbers)).unwrap();
+                writeln!(&mut eqn_file, "{}", solution.program_infix(numbers, InfixGrpMode::Full)).unwrap();
             }
         }
     }

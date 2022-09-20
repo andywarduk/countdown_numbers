@@ -1,4 +1,5 @@
-use programs::{Programs};
+use programs::*;
+use infix::*;
 
 use std::collections::HashSet;
 use std::env;
@@ -61,7 +62,7 @@ fn main() {
                         if num_outputs > 1 {
                             print!("Equation: ");
                         }
-                        println!("{}", s.program_infix(&args.cards));
+                        println!("{}", s.program_infix(&args.cards, InfixGrpMode::Full));
                     }
 
                     if args.output.contains(Output::STEPS) {

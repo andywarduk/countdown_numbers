@@ -27,6 +27,11 @@ pub enum InfixGrpElem {
     Term(Vec<InfixGrpElem>),
 }
 
+pub enum InfixGrpMode {
+    Full,
+    Type
+}
+
 impl InfixGrpElem {
 
     pub fn colour(&self, colour: bool, numbers: &[u32]) -> String {
@@ -51,9 +56,9 @@ impl InfixGrpElem {
 
 }
 
-pub fn infix_group<F>(infix: &Infix, cb: &mut F) -> Result<Vec<InfixGrpElem>, ()>
+pub fn infix_group<F>(infix: &Infix, mode: InfixGrpMode, cb: &mut F) -> Result<Vec<InfixGrpElem>, ()>
 where F: FnMut(&Vec<InfixGrpElem>) -> bool {
-    let grp = infix_group_recurse(infix, cb, 0)?;
+    let grp = infix_group_recurse(infix, &mode, cb, 0)?;
 
     if cb(&grp) { 
         Ok(grp)
@@ -62,7 +67,7 @@ where F: FnMut(&Vec<InfixGrpElem>) -> bool {
     }
 }
 
-fn infix_group_recurse<F>(infix: &Infix, cb: &mut F, parent_precedence: u32) -> Result<Vec<InfixGrpElem>, ()>
+fn infix_group_recurse<F>(infix: &Infix, mode: &InfixGrpMode, cb: &mut F, parent_precedence: u32) -> Result<Vec<InfixGrpElem>, ()>
 where F: FnMut(&Vec<InfixGrpElem>) -> bool {
     match infix {
         Infix::Number(n) => Ok(vec![InfixGrpElem::Number(*n)]),
@@ -82,11 +87,16 @@ where F: FnMut(&Vec<InfixGrpElem>) -> bool {
                 right_add = 1;
             }
 
-            result.append(&mut infix_group_recurse(left, cb, precedence + left_add)?);
+            result.append(&mut infix_group_recurse(left, mode, cb, precedence + left_add)?);
             result.push(InfixGrpElem::Op(*op));
-            result.append(&mut infix_group_recurse(right, cb, precedence + right_add)?);
+            result.append(&mut infix_group_recurse(right, mode, cb, precedence + right_add)?);
 
-            if parent_precedence > precedence {
+            let is_group = match mode {
+                InfixGrpMode::Full => parent_precedence > precedence,
+                InfixGrpMode::Type => parent_precedence != 0 && parent_precedence != precedence
+            };
+
+            if is_group {
                 if !cb(&result) { return Err(()) };
                 result = vec![InfixGrpElem::Term(result)];
             }
@@ -96,8 +106,8 @@ where F: FnMut(&Vec<InfixGrpElem>) -> bool {
     }
 }
 
-pub fn infix_simplify(infix: &Infix) -> InfixGrpElem {
-    InfixGrpElem::Term(infix_group(infix, &mut |_| true).unwrap())
+pub fn infix_simplify(infix: &Infix, mode: InfixGrpMode) -> InfixGrpElem {
+    InfixGrpElem::Term(infix_group(infix, mode, &mut |_| true).unwrap())
 }
 
 // Tests
@@ -116,13 +126,9 @@ mod tests {
             _ => false
         }).count();
 
-        let mut numbers = Vec::with_capacity(num_count);
+        let numbers: Vec<u32> = (0..num_count).map(|i| i as u32).collect();
 
-        for i in 0..num_count {
-            numbers.push(i as u32)
-        }
-
-        assert_eq!(program.infix(&numbers, false), expected_infix);
+        assert_eq!(expected_infix, program.infix(&numbers, InfixGrpMode::Full, false));
     }
 
     #[test]
@@ -173,7 +179,25 @@ mod tests {
         simplify_test("0 1 - 2 + 3 -", "0 - 1 + 2 - 3");
         simplify_test("0 1 - 2 - 3 +", "0 - 1 - 2 + 3");
         simplify_test("0 1 - 2 - 3 -", "0 - 1 - 2 - 3");
+    }
 
+    fn group_test(rpn: &str, numbers: &[u32], exp_full: &str, exp_type: &str) {
+        let program: Program = rpn.into();
+
+        let infix = program_infixtree(&program);
+
+        let simple1 = infix_simplify(&infix, InfixGrpMode::Full);
+
+        assert_eq!(exp_full, simple1.colour(false, numbers));
+
+        let simple2 = infix_simplify(&infix, InfixGrpMode::Type);
+
+        assert_eq!(exp_type, simple2.colour(false, numbers));
+    }
+
+    #[test]
+    fn group_tests() {
+        group_test("1 2 0 3 + 4 / - +", &[100, 75, 50, 10, 10], "75 + 50 - (100 + 10) / 10", "75 + 50 - ((100 + 10) / 10)")
     }
 
 }
