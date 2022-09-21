@@ -181,13 +181,13 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
         }
     }
 
-    update_stats(&mut results.stats, &details, sols, &sol_reached);
+    update_stats(&mut results.stats, details, sols, &sol_reached);
 
     // Update big number stats
     let big_cnt = details.cards.iter().filter(|&c| *c > 10).count();
 
     if big_cnt < MAX_BIG {
-        update_stats(&mut results.big_stats[big_cnt], &details, sols, &sol_reached);
+        update_stats(&mut results.big_stats[big_cnt], details, sols, &sol_reached);
     }
 
     Ok(())

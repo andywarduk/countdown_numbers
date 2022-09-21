@@ -48,11 +48,11 @@ pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mu
         true
     }).and_then(|grp| {
         if set.insert(grp) {
-            Ok(())
+            Some(())
         } else {
-            Err(())
+            None
         }
-    }).is_err()
+    }).is_none()
 }
 
 #[cfg(test)]

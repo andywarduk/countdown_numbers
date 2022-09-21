@@ -23,9 +23,14 @@ impl Program {
         self.instructions.push(op);
     } 
 
-    // Returns the numer of operators in the program
+    /// Returns the number of operators in the program
     pub fn len(&self) -> usize {
         self.instructions.len()
+    }
+
+    // Returns true is the program contains no instructions
+    pub fn is_empty(&self) -> bool {
+        self.instructions.is_empty()
     }
 
     /// Borrows instructions from the program
@@ -34,9 +39,9 @@ impl Program {
     }
 
     /// Processes a program
-    pub fn process<S, N, T>(&self, stack: &mut Vec<S>, mut num_cb: N, mut op_cb: T) -> Result<S, ()> 
-    where N: FnMut(u8) -> Result<S, ()>,
-          T: FnMut(S, ProgOp, S) -> Result<S, ()> {
+    pub fn process<S, N, T>(&self, stack: &mut Vec<S>, mut num_cb: N, mut op_cb: T) -> Option<S> 
+    where N: FnMut(u8) -> Option<S>,
+          T: FnMut(S, ProgOp, S) -> Option<S> {
         stack.clear();
 
         for op in &self.instructions {
@@ -52,7 +57,7 @@ impl Program {
             }
         }
     
-        Ok(stack.pop().unwrap())
+        stack.pop()
     }
     
     /// Runs the program with a given set of numbers and preallocated stack
@@ -131,7 +136,7 @@ impl Program {
         let mut stack: Vec<(u32, String)> = Vec::with_capacity(numbers.len());
 
         self.process(&mut stack, |n| {
-            Ok((numbers[n as usize], ProgOp::Number(n).colour(numbers, colour)))
+            Some((numbers[n as usize], ProgOp::Number(n).colour(numbers, colour)))
         }, |(n2, s2), op, (n1, s1)| {
             let ans = match op {
                 ProgOp::OpAdd => n2 + n1,
@@ -147,7 +152,7 @@ impl Program {
 
             steps.push(format!("{} {} {} {} {}", s2, op.colour(numbers, colour), s1, equals, ans_str));
 
-            Ok((ans, ans_str))
+            Some((ans, ans_str))
         }).unwrap();
 
         steps
@@ -155,7 +160,7 @@ impl Program {
 
     /// Converts the RPN program to operator type grouped infix equation
     pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
-        infix_group(&self).colour(numbers, colour)
+        infix_group(self).colour(numbers, colour)
     }
     
     /// Converts the RPN program to a string for a given set of numbers
@@ -180,9 +185,9 @@ impl From<&str> for Program {
     fn from(rpn: &str) -> Self {
         let instructions = rpn.chars().filter_map(|c| {
             match c {
-                '0'..='9' => Some(ProgOp::Number(c as u8 - '0' as u8)),
-                'a'..='z' => Some(ProgOp::Number(c as u8 - 'a' as u8)),
-                'A'..='Z' => Some(ProgOp::Number(c as u8 - 'A' as u8)),
+                '0'..='9' => Some(ProgOp::Number(c as u8 - b'0')),
+                'a'..='z' => Some(ProgOp::Number(c as u8 - b'a')),
+                'A'..='Z' => Some(ProgOp::Number(c as u8 - b'A')),
                 '+' => Some(ProgOp::OpAdd),
                 '-' => Some(ProgOp::OpSub),
                 '*' => Some(ProgOp::OpMul),

@@ -60,7 +60,7 @@ pub fn infix_group(program: &Program) -> InfixGrpTypeElem {
 }
 
 /// Returns an operator type simplified equation tree for a program
-pub fn infix_group_cb<F>(program: &Program, grp_cb: &mut F) -> Result<InfixGrpTypeElem, ()>
+pub fn infix_group_cb<F>(program: &Program, grp_cb: &mut F) -> Option<InfixGrpTypeElem>
 where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
     let mut stack = Vec::new();
 
@@ -68,11 +68,11 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
 }
 
 /// Returns an operator type simplified equation tree for a program
-pub fn infix_group_cb_stack<F>(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, grp_cb: &mut F) -> Result<InfixGrpTypeElem, ()>
+pub fn infix_group_cb_stack<F>(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, grp_cb: &mut F) -> Option<InfixGrpTypeElem>
 where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
     stack.clear();
 
-    let build_grp = |other_op, t1, op, t2, inc_right, grp_cb: &mut F| -> Result<InfixGrpTypeElem, ()> {
+    let build_grp = |other_op, t1, op, t2, inc_right, grp_cb: &mut F| -> Option<InfixGrpTypeElem> {
         let mut grp = Vec::with_capacity(8);
 
         match t1 {
@@ -82,7 +82,7 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
                 grp.append(&mut t1_terms);
             }
             InfixGrpTypeElem::Group(ref t1_terms) => {
-                if !grp_cb(t1_terms) { Err(())? }
+                if !grp_cb(t1_terms) { None? }
                 grp.push((op, t1))
             }
             _ => grp.push((op, t1))
@@ -96,7 +96,7 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
                     grp.append(&mut t2_terms)
                 }
                 InfixGrpTypeElem::Group(ref t2_terms) => {
-                    if !grp_cb(t2_terms) { Err(())? }
+                    if !grp_cb(t2_terms) { None? }
                     grp.push((op, t2))
                 }
                 _ => grp.push((op, t2))
@@ -104,7 +104,7 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
         } else {
             match t2 {
                 InfixGrpTypeElem::Group(ref t2_terms) => {
-                    if !grp_cb(t2_terms) { Err(())? }
+                    if !grp_cb(t2_terms) { None? }
                     grp.push((op, t2))
                 }
                 _ => {
@@ -113,27 +113,27 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
             }
         }
 
-        Ok(InfixGrpTypeElem::Group(grp))
+        Some(InfixGrpTypeElem::Group(grp))
     };
 
-    let build_term = |t1, op, t2, grp_cb: &mut F| -> Result<InfixGrpTypeElem, ()> {
+    let build_term = |t1, op, t2, grp_cb: &mut F| -> Option<InfixGrpTypeElem> {
         if let InfixGrpTypeElem::Group(grp1) = &t1 {
             if !grp_cb(grp1) {
-                Err(())?
+                None?
             }
         }
 
         if let InfixGrpTypeElem::Group(grp2) = &t2 {
             if !grp_cb(grp2) {
-                Err(())?
+                None?
             }
         }
 
-        Ok(InfixGrpTypeElem::Term(Box::new(t1), op, Box::new(t2)))
+        Some(InfixGrpTypeElem::Term(Box::new(t1), op, Box::new(t2)))
     };
 
     let outer_term = program.process(stack, |n| {
-        Ok(InfixGrpTypeElem::Number(n))
+        Some(InfixGrpTypeElem::Number(n))
     }, |t1, op, t2| {
         match op {
             ProgOp::OpAdd => {
@@ -156,11 +156,11 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
 
     if let InfixGrpTypeElem::Group(grp) = &outer_term {
         if !grp_cb(grp) {
-            Err(())?
+            None?
         }
     }
 
-    Ok(outer_term)
+    Some(outer_term)
 }
 
 // Tests

@@ -44,16 +44,14 @@ fn main() {
     let mut args = Args::parse();
 
     // Get card set
-    let cards;
-
-    if args.special_cards {
-        cards = get_special_cards();
+    let cards = if args.special_cards {
+        get_special_cards()
     } else {
-        cards = get_default_cards();
-    }
+        get_default_cards()
+    };
 
     // Make sure we have a valid output path
-    if create_out_dir(&mut args, &cards) {
+    if create_out_dir(&mut args, cards) {
         // Generate RPN equations
         print!("Generating programs...");
         io::stdout().flush().unwrap();

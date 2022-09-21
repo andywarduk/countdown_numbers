@@ -29,10 +29,8 @@ fn main() {
 
                 solutions = solutions.into_iter().filter(|s| {
                     // Filter out duplicated solutions
-                    if !args.inc_commutative {
-                        if duplicated(&s.program, &mut stack, &mut set) {
-                            return false
-                        }
+                    if !args.inc_commutative && duplicated(s.program, &mut stack, &mut set) {
+                        return false
                     }
                     
                     // Filter out identical equations (can happen when duplicate card is chosen)
@@ -127,9 +125,9 @@ fn parse_args() -> Result<Args, i32> {
     let target = loop {
         match arg_iter.next() {
             Some(arg) => {
-                if arg.starts_with('-') {
+                if let Some(switch) = arg.strip_prefix('-') {
                     // A command line switch
-                    match &arg[1..] {
+                    match switch {
                         "c" | "-commutative" => {
                             inc_commutative = true;
                         },
