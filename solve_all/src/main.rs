@@ -1,17 +1,17 @@
 use std::collections::{HashSet, VecDeque};
-use std::path::Path;
 use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::sync::{Mutex, Arc};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
-use itertools::Itertools;
 use clap::Parser;
+use itertools::Itertools;
 
+use cards::*;
 use programs::*;
-use cards::{get_default_cards, get_special_cards};
 
 // Structure to hold parsed command line arguments
 
@@ -19,23 +19,23 @@ use cards::{get_default_cards, get_special_cards};
 #[clap(author, version, about, long_about = None)]
 struct Args {
     /// Output equations in results files
-    #[clap(short='e', long="equations", action)]
+    #[clap(short = 'e', long = "equations", action)]
     output_equations: bool,
 
     /// Number of threads to run
-    #[clap(short='t', long="threads", default_value_t=0, value_parser)]
+    #[clap(short = 't', long = "threads", default_value_t = 0, value_parser)]
     threads: u16,
 
     /// Output directory
-    #[clap(short='o', long="outdir", default_value="", value_parser)]
+    #[clap(short = 'o', long = "outdir", default_value = "", value_parser)]
     out_dir: String,
 
     /// Use special cards
-    #[clap(short='s', long="special", action)]
+    #[clap(short = 's', long = "special", action)]
     special_cards: bool,
 
     /// Include commutative equations
-    #[clap(short='c', long="commutative", action)]
+    #[clap(short = 'c', long = "commutative", action)]
     inc_commutative: bool,
 }
 
@@ -59,7 +59,7 @@ fn main() {
         println!(" {} programs generated", programs.len());
 
         // Generate card combinations
-        print!("Generating card combinations...");    
+        print!("Generating card combinations...");
         io::stdout().flush().unwrap();
         let card_combs = Arc::new(Mutex::new({
             let mut card_combs: VecDeque<Vec<u32>> = VecDeque::new();
@@ -109,7 +109,7 @@ fn main() {
                                 // Run all equations for this card selection
                                 solve(args_ref, programs_ref, &numbers);
                             }
-                            None => break
+                            None => break,
                         }
                     }
                 });
@@ -182,7 +182,11 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
         }).collect();
 
         // Create a string listing all of the target numbers with the number of solutions
-        let sol_cnt_str = sol_cnt.iter().enumerate().map(|(i, c)| format!("{}={}", i + 100, c)).join(", ");
+        let sol_cnt_str = sol_cnt
+            .iter()
+            .enumerate()
+            .map(|(i, c)| format!("{}={}", i + 100, c))
+            .join(", ");
 
         // Count how many target numbers have > 0 solutions
         let covered = sol_cnt.iter().filter(|&&c| c > 0).count();

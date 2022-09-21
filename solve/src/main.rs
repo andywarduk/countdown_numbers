@@ -4,8 +4,8 @@ use std::process;
 
 use bitflags::bitflags;
 
-use programs::*;
 use programs::duplicates::*;
+use programs::*;
 
 fn main() {
     // Parse command line arguments
@@ -16,7 +16,7 @@ fn main() {
 
             println!("Generating programs...");
             let programs = Programs::new(args.cards.len(), true);
-    
+
             println!("Running {} programs...", programs.len());
             let mut solutions = programs.run_target(args.target, &args.cards);
 
@@ -27,19 +27,22 @@ fn main() {
                 let mut stack = Vec::new();
                 let mut set = HashSet::new();
 
-                solutions = solutions.into_iter().filter(|s| {
-                    // Filter out duplicated solutions
-                    if !args.inc_commutative && duplicated(s.program, &mut stack, &mut set) {
-                        return false
-                    }
-                    
-                    // Filter out identical equations (can happen when duplicate card is chosen)
-                    let rpn = s.program.rpn(&args.cards, false);
+                solutions = solutions
+                    .into_iter()
+                    .filter(|s| {
+                        // Filter out duplicated solutions
+                        if !args.inc_commutative && duplicated(s.program, &mut stack, &mut set) {
+                            return false;
+                        }
+                        
+                        // Filter out identical equations (can happen when duplicate card is chosen)
+                        let rpn = s.program.rpn(&args.cards, false);
 
-                    rpn_set.insert(rpn)
-                }).collect();
+                        rpn_set.insert(rpn)
+                    })
+                    .collect();
 
-                println!("{} {} found", solutions.len(), if solutions.len() == 1 {"solution"} else {"solutions"});
+                println!("{} {} found", solutions.len(), if solutions.len() == 1 { "solution" } else { "solutions" });
 
                 // Sort solutions by shortest first
                 solutions.sort();
@@ -82,7 +85,7 @@ fn main() {
             }
 
             0
-        },
+        }
         Err(code) => {
             // Invalid arguments
             usage();
@@ -106,7 +109,7 @@ struct Args {
     target: u32,
     cards: Vec<u32>,
     inc_commutative: bool,
-    output: Output
+    output: Output,
 }
 
 fn parse_args() -> Result<Args, i32> {
@@ -130,19 +133,19 @@ fn parse_args() -> Result<Args, i32> {
                     match switch {
                         "c" | "-commutative" => {
                             inc_commutative = true;
-                        },
+                        }
                         "i" | "-infix" => {
                             add_output(Output::INFIX);
-                        },
+                        }
                         "r" | "-rpn" => {
                             add_output(Output::RPN);
-                        },
+                        }
                         "s" | "-steps" => {
                             add_output(Output::STEPS);
-                        },
+                        }
                         _ => {
                             eprintln!("Unrecognised switch '{}'", arg);
-                            return Err(1)
+                            Err(1)?;
                         }
                     }
                 } else {
@@ -151,14 +154,14 @@ fn parse_args() -> Result<Args, i32> {
                         Ok(num) => break num,
                         Err(std::num::ParseIntError { .. }) => {
                             eprintln!("Target must be a number (\"{}\")", arg);
-                            return Err(1);
+                            Err(1)?;
                         }
                     }
                 }
             }
             None => {
                 eprintln!("No target value");
-                return Err(1)
+                Err(1)?;
             }
         }
     };
@@ -167,14 +170,14 @@ fn parse_args() -> Result<Args, i32> {
     let cards = match arg_iter.map(|a| a.parse::<u32>()).collect::<Result<Vec<u32>, _>>() {
         Err(std::num::ParseIntError { .. }) => {
             eprintln!("Cards must be numeric");
-            return Err(1)
-        },
-        Ok(v) => v
+            Err(1)?
+        }
+        Ok(v) => v,
     };
 
     if cards.is_empty() {
         eprintln!("No cards specified");
-        return Err(1)
+        Err(1)?
     }
 
     if output.is_empty() {
@@ -185,7 +188,7 @@ fn parse_args() -> Result<Args, i32> {
         target,
         cards,
         inc_commutative,
-        output
+        output,
     })
 }
 

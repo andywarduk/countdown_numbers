@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use crate::program::*;
-use crate::progop::*;
 use crate::infix::*;
+use crate::progop::*;
+use crate::program::*;
 
 /// Returns true if the program would be duplicated by rearranging the terms of the equation
 pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
@@ -17,7 +17,7 @@ pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mu
                     ProgOp::OpAdd | ProgOp::OpMul => {
                         if second_op {
                             // Got first operator after the second
-                            return false
+                            return false;
                         }
                     }
                     ProgOp::OpSub | ProgOp::OpDiv => {
@@ -27,7 +27,7 @@ pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mu
                             last_num = 0;
                         }
                     }
-                    _ => panic!("Operator expected")
+                    _ => panic!("Operator expected"),
                 }
             }
 
@@ -46,19 +46,15 @@ pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mu
         }
 
         true
-    }).and_then(|grp| {
-        if set.insert(grp) {
-            Some(())
-        } else {
-            None
-        }
-    }).is_none()
+    })
+    .and_then(|grp| if set.insert(grp) { Some(()) } else { None })
+    .is_none()
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
     use super::*;
+    use crate::*;
     use itertools::Itertools;
 
     fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: bool) {
@@ -74,8 +70,9 @@ mod tests {
         infix_group_cb(&program, &mut |grp| {
             groups.push(format!("{}", InfixGrpTypeElem::Group(grp.clone()).colour(&elems, false)));
             true
-        }).unwrap();
-        
+        })
+        .unwrap();
+
         // Get simplified infix strings
         let infix_elem = infix_group(&program).colour(&elems, false);
         let infix_nums = infix_group(&program).colour(numbers, false);
@@ -174,10 +171,10 @@ mod tests {
     fn test3() {
         // RPN: 75 50 100 10 + 10 / - +
         // Equation: 75 + 50 - (100 + 10) / 10 = 114
-        test_int("1 2 0 3 + 4 / - +", &[100, 75, 50, 10, 10],"75 + 50 - ((100 + 10) / 10)", 114, 3, false);
+        test_int("1 2 0 3 + 4 / - +", &[100, 75, 50, 10, 10], "75 + 50 - ((100 + 10) / 10)", 114, 3, false);
         // RPN: 100 25 10 × 10 - × 75 50 + /
         // Equation: 100 × (25 × 10 - 10) / (75 + 50) = 192
-        test_int("0 3 4 * 5 - * 1 2 + /", &[100, 75, 50, 25, 10, 10], "100 × ((25 × 10) - 10) / (75 + 50)", 192, 4, false); 
+        test_int("0 3 4 * 5 - * 1 2 + /", &[100, 75, 50, 25, 10, 10], "100 × ((25 × 10) - 10) / (75 + 50)", 192, 4, false);
     }
 
     #[test]
@@ -187,28 +184,29 @@ mod tests {
         let numbers = vec![0, 1, 2, 3];
 
         let expected = vec![
+            // Single term
             "0",
             "1",
             "2",
             "3",
-
+            // Double term
             "0 + 1",
             "0 + 2",
             "0 + 3",
             "1 + 2",
             "1 + 3",
             "2 + 3",
-
+            // Triple term
             "0 + 1 + 2",
             "0 + 1 + 3",
             "0 + 2 + 3",
             "1 + 2 + 3",
-
-            "0 + 1 + 2 + 3"
+            // Quad term
+            "0 + 1 + 2 + 3",
         ];
 
         for prog in &programs.programs {
-            println!("Equation: {}", prog.infix(&numbers, true));            
+            println!("Equation: {}", prog.infix(&numbers, true));
         }
 
         assert_eq!(expected.len(), programs.len());
@@ -217,5 +215,4 @@ mod tests {
             assert_eq!(*exp, prog.infix(&numbers, false))
         }
     }
-
 }

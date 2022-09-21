@@ -1,5 +1,6 @@
-use crate::progop::*;
 use crate::infix::*;
+use crate::progop::*;
+
 use colored::*;
 use itertools::Itertools;
 
@@ -10,7 +11,6 @@ pub struct Program {
 }
 
 impl Program {
-
     /// Creates a new program
     pub fn new(num_cnt: usize) -> Self {
         Program {
@@ -21,14 +21,14 @@ impl Program {
     /// Adds an instruction to the program
     pub fn push(&mut self, op: ProgOp) {
         self.instructions.push(op);
-    } 
+    }
 
     /// Returns the number of operators in the program
     pub fn len(&self) -> usize {
         self.instructions.len()
     }
 
-    // Returns true is the program contains no instructions
+    /// Returns true is the program contains no instructions
     pub fn is_empty(&self) -> bool {
         self.instructions.is_empty()
     }
@@ -39,16 +39,16 @@ impl Program {
     }
 
     /// Processes a program
-    pub fn process<S, N, T>(&self, stack: &mut Vec<S>, mut num_cb: N, mut op_cb: T) -> Option<S> 
-    where N: FnMut(u8) -> Option<S>,
-          T: FnMut(S, ProgOp, S) -> Option<S> {
+    pub fn process<S, N, T>(&self, stack: &mut Vec<S>, mut num_cb: N, mut op_cb: T) -> Option<S>
+    where
+        N: FnMut(u8) -> Option<S>,
+        T: FnMut(S, ProgOp, S) -> Option<S>,
+    {
         stack.clear();
 
         for op in &self.instructions {
             match op {
-                ProgOp::Number(n) => {
-                    stack.push(num_cb(*n)?)
-                }
+                ProgOp::Number(n) => stack.push(num_cb(*n)?),
                 _ => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
@@ -56,10 +56,10 @@ impl Program {
                 }
             }
         }
-    
+
         stack.pop()
     }
-    
+
     /// Runs the program with a given set of numbers and preallocated stack
     pub fn run(&self, numbers: &[u32], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
         // NB this does not use the process function for speed
@@ -73,57 +73,57 @@ impl Program {
                     let n2 = stack.pop().unwrap();
 
                     stack.push(n2 + n1);
-                },
+                }
                 ProgOp::OpSub => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
 
                     if n2 < n1 {
-                        return Err(ProgErr::Negative)
+                        Err(ProgErr::Negative)?
                     }
 
                     let int = n2 - n1;
 
                     if int == 0 {
-                        return Err(ProgErr::Zero)
+                        Err(ProgErr::Zero)?
                     }
 
                     stack.push(int);
-                },
+                }
                 ProgOp::OpMul => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
 
                     if n1 == 1 || n2 == 1 {
-                        return Err(ProgErr::Mul1)
+                        Err(ProgErr::Mul1)?
                     }
 
                     let int = n2 * n1;
 
                     if int == 0 {
-                        return Err(ProgErr::Zero)
+                        Err(ProgErr::Zero)?
                     }
 
                     stack.push(int);
-                },
+                }
                 ProgOp::OpDiv => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
 
                     if n1 == 0 {
-                        return Err(ProgErr::DivZero)
+                        Err(ProgErr::DivZero)?
                     }
 
                     if n1 == 1 {
-                        return Err(ProgErr::Div1)
+                        Err(ProgErr::Div1)?
                     }
 
                     if n2 % n1 != 0 {
-                        return Err(ProgErr::NonInteger)
+                        Err(ProgErr::NonInteger)?
                     }
 
                     stack.push(n2 / n1);
-                },
+                }
             }
         }
 
@@ -135,25 +135,27 @@ impl Program {
         let mut steps = Vec::new();
         let mut stack: Vec<(u32, String)> = Vec::with_capacity(numbers.len());
 
-        self.process(&mut stack, |n| {
-            Some((numbers[n as usize], ProgOp::Number(n).colour(numbers, colour)))
-        }, |(n2, s2), op, (n1, s1)| {
-            let ans = match op {
-                ProgOp::OpAdd => n2 + n1,
-                ProgOp::OpSub => n2 - n1,
-                ProgOp::OpMul => n2 * n1,
-                ProgOp::OpDiv => n2 / n1,
-                _ => panic!("Non-operator not expected")
-            };
+        self.process(&mut stack,
+            |n| Some((numbers[n as usize], ProgOp::Number(n).colour(numbers, colour))),
+            |(n2, s2), op, (n1, s1)| {
+                let ans = match op {
+                    ProgOp::OpAdd => n2 + n1,
+                    ProgOp::OpSub => n2 - n1,
+                    ProgOp::OpMul => n2 * n1,
+                    ProgOp::OpDiv => n2 / n1,
+                    _ => panic!("Non-operator not expected"),
+                };
 
-            let ans_str = ans.to_string();
+                let ans_str = ans.to_string();
 
-            let equals = if colour { "=".dimmed().to_string() } else { "=".to_string() };
+                let equals = if colour { "=".dimmed().to_string() } else { "=".to_string() };
 
-            steps.push(format!("{} {} {} {} {}", s2, op.colour(numbers, colour), s1, equals, ans_str));
+                steps.push(format!("{} {} {} {} {}", s2, op.colour(numbers, colour), s1, equals, ans_str));
 
-            Some((ans, ans_str))
-        }).unwrap();
+                Some((ans, ans_str))
+            }
+        )
+        .unwrap();
 
         steps
     }
@@ -162,29 +164,18 @@ impl Program {
     pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
         infix_group(self).colour(numbers, colour)
     }
-    
+
     /// Converts the RPN program to a string for a given set of numbers
     pub fn rpn(&self, numbers: &[u32], colour: bool) -> String {
         self.instructions.iter().map(|i| i.colour(numbers, colour)).join(" ")
     }
-
-}
-
-impl From<Vec<ProgOp>> for Program {
-
-    fn from(instructions: Vec<ProgOp>) -> Self {
-        Program {
-            instructions,
-        }
-    }
-
 }
 
 impl From<&str> for Program {
-
     fn from(rpn: &str) -> Self {
-        let instructions = rpn.chars().filter_map(|c| {
-            match c {
+        let instructions = rpn
+            .chars()
+            .filter_map(|c| match c {
                 '0'..='9' => Some(ProgOp::Number(c as u8 - b'0')),
                 'a'..='z' => Some(ProgOp::Number(c as u8 - b'a')),
                 'A'..='Z' => Some(ProgOp::Number(c as u8 - b'A')),
@@ -192,32 +183,29 @@ impl From<&str> for Program {
                 '-' => Some(ProgOp::OpSub),
                 '*' => Some(ProgOp::OpMul),
                 '/' => Some(ProgOp::OpDiv),
-                _ => None
-            }
-        }).collect();
+                _ => None,
+            })
+            .collect();
 
-        Program {
-            instructions,
-        }
+        Program { instructions }
     }
-
 }
 
 /// Errors generated by RPN program run
 #[derive(Debug, Eq, PartialEq)]
 pub enum ProgErr {
     /// Program generated a zero intermediate result
-    Zero,       
+    Zero,
     /// Program generated a negative intermediate result
-    Negative,   
+    Negative,
     /// Program encountered a division by zero
-    DivZero,    
+    DivZero,
     /// Program encountered a non-integer intermediate result
-    NonInteger, 
+    NonInteger,
     /// Program encountered multiply by 1 (noop)
-    Mul1,       
+    Mul1,
     /// Program encountered divide by 1 (noop)
-    Div1,       
+    Div1,
 }
 
 // Tests
@@ -267,5 +255,4 @@ mod tests {
         assert_eq!(Err(ProgErr::DivZero), program.run(&[3, 0], &mut stack));
         assert_eq!(Err(ProgErr::Div1), program.run(&[3, 1], &mut stack));
     }
-
 }

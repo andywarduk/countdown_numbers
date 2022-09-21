@@ -1,10 +1,10 @@
-use std::error::Error;
 use std::env;
-use std::process;
+use std::error::Error;
 use std::fs;
-use std::path;
 use std::io;
-use std::io::{BufRead};
+use std::io::BufRead;
+use std::path;
+use std::process;
 
 fn main() {
     let mut arg_iter = env::args();
@@ -14,7 +14,6 @@ fn main() {
         eprintln!("Usage: stats <dir>");
 
         1
-
     } else {
         let mut results = Results::default();
 
@@ -32,12 +31,9 @@ fn main() {
             output_results(&results);
 
             0
-
         } else {
             res
-
         }
-
     });
 }
 
@@ -59,7 +55,6 @@ struct Stats {
 }
 
 impl Default for Stats {
-
     fn default() -> Self {
         Self {
             files: 0,
@@ -71,10 +66,9 @@ impl Default for Stats {
             tot_sols: 0,
             sol_25_bucket: vec![0; TARGET_COUNT / 25],
             sol_50_bucket: vec![0; TARGET_COUNT / 50],
-            sol_100_bucket: vec![0; TARGET_COUNT / 100]
+            sol_100_bucket: vec![0; TARGET_COUNT / 100],
         }
     }
-
 }
 
 struct Results {
@@ -83,14 +77,12 @@ struct Results {
 }
 
 impl Default for Results {
-
     fn default() -> Self {
         Self {
             stats: Stats::default(),
-            big_stats: vec![Stats::default(); MAX_BIG]
+            big_stats: vec![Stats::default(); MAX_BIG],
         }
     }
-
 }
 
 fn process_dir(results: &mut Results, dir: &str) -> i32 {
@@ -116,7 +108,7 @@ fn process_dir(results: &mut Results, dir: &str) -> i32 {
 
 struct FileDetails {
     path: path::PathBuf,
-    cards: Vec<u32>
+    cards: Vec<u32>,
 }
 
 fn result_file_details(f: fs::DirEntry) -> Option<FileDetails> {
@@ -133,7 +125,7 @@ fn result_file_details(f: fs::DirEntry) -> Option<FileDetails> {
 
     // Check extension
     if ext != "txt" {
-        return None
+        None?
     }
 
     // Get file stem
@@ -142,15 +134,16 @@ fn result_file_details(f: fs::DirEntry) -> Option<FileDetails> {
     let file_stem = os_file_stem.to_str()?;
 
     // Check file stem
-    let cards = file_stem.split('-').map(|c| c.parse::<u32>()).collect::<Result<Vec<u32>, _>>().ok()?;
+    let cards = file_stem
+        .split('-')
+        .map(|c| c.parse::<u32>())
+        .collect::<Result<Vec<u32>, _>>()
+        .ok()?;
 
     // Check we have some numbers
     (!cards.is_empty()).then_some(())?;
 
-    Some(FileDetails {
-        path,
-        cards
-    })
+    Some(FileDetails { path, cards })
 }
 
 fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<dyn Error>> {
@@ -177,7 +170,7 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
                 sols += 1;
             }
             '.' | '\n' => (),
-            _ => return Err(format!("Invalid character '{}' found in {}", c, details.path.display()).into())
+            _ => return Err(format!("Invalid character '{}' found in {}", c, details.path.display()).into()),
         }
     }
 
@@ -269,7 +262,7 @@ fn output_stats(stats: &Stats, desc: &str) {
     let mut min_sols = stats.sol_count[0];
     let mut min_sol_elems = Vec::new();
     let mut max_sols = stats.sol_count[0];
-    let mut max_sol_elems= Vec::new();
+    let mut max_sol_elems = Vec::new();
 
     println!("===== {} =====", desc);
     println!("Target, Combinations");
@@ -325,10 +318,20 @@ fn output_stats(stats: &Stats, desc: &str) {
     println!();
     println!("{} Statistics", desc);
 
-    let elems = min_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", ");
+    let elems = min_sol_elems
+        .iter()
+        .map(|n| (n + 100).to_string())
+        .collect::<Vec<String>>()
+        .join(", ");
+
     println!("Min Target Achieved, {}, {}, Targets, {}", min_sols, percent(min_sols, stats.files), elems);
 
-    let elems = max_sol_elems.iter().map(|n| (n + 100).to_string()).collect::<Vec<String>>().join(", ");
+    let elems = max_sol_elems
+        .iter()
+        .map(|n| (n + 100).to_string())
+        .collect::<Vec<String>>()
+        .join(", ");
+
     println!("Max Target Achieved, {}, {}, Targets, {}", max_sols, percent(max_sols, stats.files), elems);
 
     let avg_achieved = stats.tot_sols as f64 / stats.files as f64;
@@ -337,6 +340,7 @@ fn output_stats(stats: &Stats, desc: &str) {
     let sols = stats.min_sols.as_ref().unwrap();
     let count = sols.len();
     print!("Min Solutions, {}, {}, Count, {}", stats.min_sol_cnt, percent(stats.min_sol_cnt, 900), count);
+    
     if count <= 5 {
         println!(", Cards, {:?}", sols);
     } else {
@@ -346,14 +350,14 @@ fn output_stats(stats: &Stats, desc: &str) {
     let sols = stats.max_sols.as_ref().unwrap();
     let count = sols.len();
     print!("Max Solutions, {}, {}, Count, {}", stats.max_sol_cnt, percent(stats.max_sol_cnt, 900), count);
+    
     if count <= 5 {
         println!(", Cards, {:?}", sols);
     } else {
         println!();
     }
-    
-    println!("Card Combinations, {}", stats.files);
 
+    println!("Card Combinations, {}", stats.files);
 }
 
 fn percent(n: usize, tot: usize) -> String {

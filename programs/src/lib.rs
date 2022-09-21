@@ -1,8 +1,8 @@
+pub mod duplicates;
 pub mod generate;
 pub mod infix;
 pub mod progop;
 pub mod program;
-pub mod duplicates;
 
 use std::cmp::Ordering;
 
@@ -13,11 +13,10 @@ use program::*;
 /// Collection of RPN program to run for a set of numbers
 pub struct Programs {
     programs: Vec<Program>,
-    nums: usize
+    nums: usize,
 }
 
 impl Programs {
-
     /// Create a new Programs struct
     pub fn new(nums: usize, inc_commutative: bool) -> Self {
         let operators = vec![ProgOp::OpAdd, ProgOp::OpSub, ProgOp::OpMul, ProgOp::OpDiv];
@@ -27,22 +26,19 @@ impl Programs {
 
     /// Create a new Programs struct with a given set of valid operators
     pub fn new_with_operators(nums: usize, inc_commutative: bool, operators: Vec<ProgOp>) -> Self {
-        let mut programs = Programs {
-            programs: Vec::new(),
-            nums
-        };
+        let mut programs = Programs { programs: Vec::new(), nums };
 
         for num_cnt in 1..=nums {
             // Generate operator counts
             let op_count = op_counts(num_cnt);
-    
+
             // Generate operator combintions
             let op_comb = op_combs(num_cnt, &operators);
 
             // Generate programs
             generate_num_programs(&mut programs, nums, num_cnt, &op_count, &op_comb, inc_commutative);
         }
-    
+
         programs
     }
 
@@ -74,15 +70,13 @@ impl Programs {
                         results.solutions.push(Solution::new(program, ans));
                     }
                 }
-                Err(e) => {
-                    match e {
-                        ProgErr::Zero => results.zero += 1,
-                        ProgErr::Negative => results.negative += 1,
-                        ProgErr::DivZero => results.div_zero += 1,
-                        ProgErr::NonInteger => results.non_integer += 1,
-                        ProgErr::Mul1 => results.mult_by_1 += 1,
-                        ProgErr::Div1 => results.div_by_1 += 1,
-                    }
+                Err(e) => match e {
+                    ProgErr::Zero => results.zero += 1,
+                    ProgErr::Negative => results.negative += 1,
+                    ProgErr::DivZero => results.div_zero += 1,
+                    ProgErr::NonInteger => results.non_integer += 1,
+                    ProgErr::Mul1 => results.mult_by_1 += 1,
+                    ProgErr::Div1 => results.div_by_1 += 1,
                 }
             }
         }
@@ -112,7 +106,6 @@ impl Programs {
     fn push(&mut self, program: Program) {
         self.programs.push(program)
     }
-    
 }
 
 /// Holds the results of running all programs with a set of numbers
@@ -126,16 +119,14 @@ pub struct Results<'a> {
     pub div_zero: usize,              // Number of programs encountering division by zero
     pub non_integer: usize,           // Number of programs with non-integer intermediate result
     pub mult_by_1: usize,             // Number of programs containing a multipy by 1
-    pub div_by_1: usize               // Number of programs containing a divide by 1
+    pub div_by_1: usize,              // Number of programs containing a divide by 1
 }
 
 impl<'a> Results<'a> {
-
     /// Create new Result
     fn new() -> Self {
         Results::default()
     }
-
 }
 
 /// Holds the result of running a program
@@ -144,23 +135,17 @@ pub struct Solution<'a> {
     /// Pointer to the program providing the solution
     pub program: &'a Program,
     /// The result of running the program with the given numbers
-    pub result: u32
+    pub result: u32,
 }
 
 impl<'a> Solution<'a> {
-
     /// Creates a new Solution struct
     fn new(program: &'a Program, result: u32) -> Self {
-        Solution {
-            program,
-            result
-        }
+        Solution { program, result }
     }
-
 }
 
 impl<'a> Ord for Solution<'a> {
-
     fn cmp(&self, other: &Self) -> Ordering {
         let mut ord = self.result.cmp(&other.result);
 
@@ -170,21 +155,16 @@ impl<'a> Ord for Solution<'a> {
 
         ord
     }
-
 }
 
 impl<'a> PartialOrd for Solution<'a> {
-
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
-
 }
 
 impl<'a> PartialEq for Solution<'a> {
-
     fn eq(&self, other: &Self) -> bool {
         self.result == other.result && self.program.len() == other.program.len()
     }
-
 }

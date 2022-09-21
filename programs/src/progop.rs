@@ -1,4 +1,5 @@
 use std::fmt;
+
 use colored::*;
 
 /// ProgOp enum - RPN program items and operators
@@ -8,11 +9,10 @@ pub enum ProgOp {
     OpAdd,
     OpSub,
     OpMul,
-    OpDiv
+    OpDiv,
 }
 
 impl ProgOp {
-
     /// Returns the string representation of a program operator, optionally coloured
     pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
         let mut res = match self {
@@ -32,11 +32,9 @@ impl ProgOp {
 
         res
     }
-
 }
 
 impl fmt::Debug for ProgOp {
-    
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Number(n) => write!(f, "{}", n),
@@ -46,5 +44,4 @@ impl fmt::Debug for ProgOp {
             Self::OpDiv => write!(f, "/"),
         }
     }
-
 }

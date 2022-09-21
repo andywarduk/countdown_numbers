@@ -1,10 +1,10 @@
-use std::collections::HashSet;
 use std::cmp::min;
+use std::collections::HashSet;
 
 use itertools::Itertools;
 
-use crate::*;
 use crate::duplicates::*;
+use crate::*;
 
 pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>, inc_commutative: bool) {
     let mut set = HashSet::with_capacity(1_000_000 * num_cnt);
@@ -18,7 +18,6 @@ pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usiz
             program.push(ProgOp::Number(nums[0] as u8));
 
             programs.push(program);
-
         } else {
             for op_count in op_counts {
                 for op_comb in op_combs {
@@ -45,7 +44,6 @@ pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usiz
                     }
                 }
             }
-            
         }
     }
 }
@@ -67,7 +65,6 @@ fn op_counts_rec(results: &mut OpCounts, mut current: Vec<usize>, slot: usize, s
         // Allocate all to the last slot
         current.push(to_alloc);
         results.push(current);
-
     } else {
         // How many can we allocate to this slot?
         let max_stack = stacked - 1;
@@ -78,7 +75,6 @@ fn op_counts_rec(results: &mut OpCounts, mut current: Vec<usize>, slot: usize, s
             let next_stacked = stacked + 1 - i;
             op_counts_rec(results, next, slot + 1, slots, to_alloc - i, next_stacked);
         }
-
     }
 }
 

@@ -10,7 +10,6 @@ pub enum InfixGrpTypeElem {
 }
 
 impl InfixGrpTypeElem {
-
     /// Formats an operator type simplification equation element with optional colour
     pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
         self.colour_internal(numbers, colour, false)
@@ -33,15 +32,19 @@ impl InfixGrpTypeElem {
                 }
             }
             InfixGrpTypeElem::Group(terms) => {
-                let inner = terms.iter().enumerate().map(|(i, (op, elem))| {
-                    let elem_str = elem.colour_internal(numbers, colour, true);
+                let inner = terms
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (op, elem))| {
+                        let elem_str = elem.colour_internal(numbers, colour, true);
 
-                    if i == 0 {
-                        elem_str
-                    } else {
-                        format!(" {} {}", op.colour(numbers, colour), elem_str)
-                    }
-                }).collect();
+                        if i == 0 {
+                            elem_str
+                        } else {
+                            format!(" {} {}", op.colour(numbers, colour), elem_str)
+                        }
+                    })
+                    .collect();
 
                 if bracket {
                     format!("({})", inner)
@@ -51,7 +54,6 @@ impl InfixGrpTypeElem {
             }
         }
     }
-
 }
 
 /// Returns the infix structure for the program
@@ -61,7 +63,9 @@ pub fn infix_group(program: &Program) -> InfixGrpTypeElem {
 
 /// Returns an operator type simplified equation tree for a program
 pub fn infix_group_cb<F>(program: &Program, grp_cb: &mut F) -> Option<InfixGrpTypeElem>
-where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
+where
+    F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool,
+{
     let mut stack = Vec::new();
 
     infix_group_cb_stack(program, &mut stack, grp_cb)
@@ -69,7 +73,9 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
 
 /// Returns an operator type simplified equation tree for a program
 pub fn infix_group_cb_stack<F>(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, grp_cb: &mut F) -> Option<InfixGrpTypeElem>
-where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
+where
+    F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool,
+{
     stack.clear();
 
     let build_grp = |other_op, t1, op, t2, inc_right, grp_cb: &mut F| -> Option<InfixGrpTypeElem> {
@@ -77,39 +83,47 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
 
         match t1 {
             InfixGrpTypeElem::Group(mut t1_terms)
-            if t1_terms[0].0 == op || t1_terms[0].0 == other_op => {
+                if t1_terms[0].0 == op || t1_terms[0].0 == other_op =>
+            {
                 t1_terms[0].0 = op;
                 grp.append(&mut t1_terms);
             }
             InfixGrpTypeElem::Group(ref t1_terms) => {
-                if !grp_cb(t1_terms) { None? }
+                if !grp_cb(t1_terms) {
+                    None?
+                }
                 grp.push((op, t1))
             }
-            _ => grp.push((op, t1))
+            _ => grp.push((op, t1)),
         }
 
         if inc_right {
             match t2 {
                 InfixGrpTypeElem::Group(mut t2_terms)
-                if t2_terms[0].0 == other_op || t2_terms[0].0 == op => {
+                    if t2_terms[0].0 == other_op || t2_terms[0].0 == op =>
+                {
                     t2_terms[0].0 = op;
                     grp.append(&mut t2_terms)
                 }
                 InfixGrpTypeElem::Group(ref t2_terms) => {
-                    if !grp_cb(t2_terms) { None? }
+                    if !grp_cb(t2_terms) {
+                        None?
+                    }
+
                     grp.push((op, t2))
                 }
-                _ => grp.push((op, t2))
+                _ => grp.push((op, t2)),
             }
         } else {
             match t2 {
                 InfixGrpTypeElem::Group(ref t2_terms) => {
-                    if !grp_cb(t2_terms) { None? }
+                    if !grp_cb(t2_terms) {
+                        None?
+                    }
+
                     grp.push((op, t2))
                 }
-                _ => {
-                    grp.push((op, t2))
-                }
+                _ => grp.push((op, t2)),
             }
         }
 
@@ -132,27 +146,16 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
         Some(InfixGrpTypeElem::Term(Box::new(t1), op, Box::new(t2)))
     };
 
-    let outer_term = program.process(stack, |n| {
-        Some(InfixGrpTypeElem::Number(n))
-    }, |t1, op, t2| {
-        match op {
-            ProgOp::OpAdd => {
-                build_grp(ProgOp::OpSub, t1, op, t2, true, grp_cb)
-            }
-            ProgOp::OpMul => {
-                build_grp(ProgOp::OpDiv, t1, op, t2, true, grp_cb)
-            }
-            ProgOp::OpSub => {
-                build_grp(ProgOp::OpAdd, t1, op, t2, false, grp_cb)
-            }
-            ProgOp::OpDiv => {
-                build_grp(ProgOp::OpMul, t1, op, t2, false, grp_cb)
-            }
-            _ => {
-                build_term(t1, op, t2, grp_cb)
-            }
+    let outer_term = program.process(stack,
+        |n| Some(InfixGrpTypeElem::Number(n)),
+        |t1, op, t2| match op {
+            ProgOp::OpAdd => build_grp(ProgOp::OpSub, t1, op, t2, true, grp_cb),
+            ProgOp::OpMul => build_grp(ProgOp::OpDiv, t1, op, t2, true, grp_cb),
+            ProgOp::OpSub => build_grp(ProgOp::OpAdd, t1, op, t2, false, grp_cb),
+            ProgOp::OpDiv => build_grp(ProgOp::OpMul, t1, op, t2, false, grp_cb),
+            _ => build_term(t1, op, t2, grp_cb),
         }
-    })?;
+    )?;
 
     if let InfixGrpTypeElem::Group(grp) = &outer_term {
         if !grp_cb(grp) {
@@ -172,10 +175,14 @@ mod tests {
     fn test_rpn_infix(rpn: &str, exp_infix: &str) {
         let program: Program = rpn.into();
 
-        let num_count = program.instructions().iter().filter(|i| match i {
-            ProgOp::Number(_) => true,
-            _ => false
-        }).count();
+        let num_count = program
+            .instructions()
+            .iter()
+            .filter(|i| match i {
+                ProgOp::Number(_) => true,
+                _ => false,
+            })
+            .count();
 
         let numbers: Vec<u32> = (0..num_count).map(|i| i as u32).collect();
 
