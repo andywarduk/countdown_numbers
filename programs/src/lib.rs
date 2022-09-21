@@ -6,11 +6,10 @@ pub mod duplicates;
 use itertools::Itertools;
 use std::cmp::{min, Ordering};
 use std::collections::HashSet;
-use colored::*;
 
-use crate::progop::*;
-use crate::program::*;
-use crate::infix::*;
+use progop::*;
+use program::*;
+use duplicates::*;
 
 /// Collection of RPN program to run for a set of numbers
 pub struct Programs {
@@ -28,7 +27,7 @@ impl Programs {
     }
 
     /// Create a new Programs struct with a given set of valid operators
-    fn new_with_operators(nums: usize, inc_commutative: bool, operators: Vec<ProgOp>) -> Self {
+    pub fn new_with_operators(nums: usize, inc_commutative: bool, operators: Vec<ProgOp>) -> Self {
         let mut programs = Programs {
             programs: Vec::new(),
             nums
@@ -143,7 +142,9 @@ impl<'a> Results<'a> {
 /// Holds the result of running a program
 #[derive(Eq)]
 pub struct Solution<'a> {
-    program: &'a Program,
+    /// Pointer to the program providing the solution
+    pub program: &'a Program,
+    /// The result of running the program with the given numbers
     pub result: u32
 }
 
@@ -155,26 +156,6 @@ impl<'a> Solution<'a> {
             program,
             result
         }
-    }
-
-    /// Returns the program equation in full simplified infix style
-    pub fn program_infix_full(&self, numbers: &[u32]) -> String {
-        format!("{} {} {}", self.program.infix_full(numbers, true), "=".dimmed(), self.result)
-    }
-
-    /// Returns the program equation in full simplified infix style
-    pub fn program_infix_type(&self, numbers: &[u32]) -> String {
-        format!("{} {} {}", self.program.infix_type(numbers, true), "=".dimmed(), self.result)
-    }
-    
-    /// Returns the program equation in infix style in discrete steps
-    pub fn program_steps(&self, numbers: &[u32]) -> Vec<String> {
-        self.program.steps(numbers, true)
-    }
-
-    /// Returns the program equation in reverse polish notation
-    pub fn program_rpn(&self, numbers: &[u32]) -> String {
-        self.program.rpn(numbers, true)
     }
 
 }
@@ -212,7 +193,8 @@ impl<'a> PartialEq for Solution<'a> {
 // Support functions
 
 fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>, inc_commutative: bool) {
-    let mut set = HashSet::new();
+    let mut set = HashSet::with_capacity(1_000_000 * num_cnt);
+    let mut stack = Vec::with_capacity(num_cnt);
 
     for nums in (0..nums).permutations(num_cnt) {
         if num_cnt == 1 {
@@ -244,7 +226,7 @@ fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, o
                     }
 
                     // Commutative check
-                    if inc_commutative || program.duplicate_filter(&mut set) {
+                    if inc_commutative || !duplicated(&program, &mut stack, &mut set) {
                         programs.push(program);
                     }
                 }

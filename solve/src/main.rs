@@ -1,11 +1,11 @@
-use programs::*;
-use infix::*;
-
 use std::collections::HashSet;
 use std::env;
 use std::process;
 
 use bitflags::bitflags;
+
+use programs::*;
+use programs::duplicates::*;
 
 fn main() {
     // Parse command line arguments
@@ -15,7 +15,7 @@ fn main() {
             println!("Target {}, Cards {:?}", args.target, args.cards);
 
             println!("Generating programs...");
-            let programs = Programs::new(args.cards.len(), args.inc_commutative);
+            let programs = Programs::new(args.cards.len(), true);
     
             println!("Running {} programs...", programs.len());
             let mut solutions = programs.run_target(args.target, &args.cards);
@@ -23,21 +23,25 @@ fn main() {
             if solutions.is_empty() {
                 println!("== No solutions ==");
             } else {
-                // Filter out identical equations (can happen when duplicate card is chosen)
-                let mut eqn_set = HashSet::with_capacity(solutions.len());
+                let mut rpn_set = HashSet::with_capacity(solutions.len());
+                let mut stack = Vec::new();
+                let mut set = HashSet::new();
 
                 solutions = solutions.into_iter().filter(|s| {
-                    let rpn = s.program_rpn(&args.cards);
-
-                    if eqn_set.contains(&rpn) {
-                        false
-                    } else {
-                        eqn_set.insert(rpn);
-                        true
+                    // Filter out duplicated solutions
+                    if !args.inc_commutative {
+                        if duplicated(&s.program, &mut stack, &mut set) {
+                            return false
+                        }
                     }
+                    
+                    // Filter out identical equations (can happen when duplicate card is chosen)
+                    let rpn = s.program.rpn(&args.cards, false);
+
+                    rpn_set.insert(rpn)
                 }).collect();
 
-                println!("{} solutions found", solutions.len());
+                println!("{} {} found", solutions.len(), if solutions.len() == 1 {"solution"} else {"solutions"});
 
                 // Sort solutions by shortest first
                 solutions.sort();
@@ -55,21 +59,21 @@ fn main() {
                         if num_outputs > 1 {
                             print!("RPN: ");
                         }
-                        println!("{}", s.program_rpn(&args.cards));
+                        println!("{}", s.program.rpn(&args.cards, true));
                     }
 
                     if args.output.contains(Output::INFIX) {
                         if num_outputs > 1 {
                             print!("Equation: ");
                         }
-                        println!("{}", s.program_infix_type(&args.cards));
+                        println!("{}", s.program.infix_type(&args.cards, true));
                     }
 
                     if args.output.contains(Output::STEPS) {
                         if num_outputs > 1 {
                             println!("Steps:");
                         }
-                        for l in s.program_steps(&args.cards) {
+                        for l in s.program.steps(&args.cards, true) {
                             if num_outputs > 1 {
                                 print!("  ");
                             }

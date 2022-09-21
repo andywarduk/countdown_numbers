@@ -163,8 +163,16 @@ pub fn infix_group_type<F>(program: &Program, grp_cb: &mut F) -> Result<InfixGrp
 where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
     let mut stack = Vec::new();
 
+    infix_group_type_stack(program, &mut stack, grp_cb)
+}
+
+/// Returns an operator type simplified equation tree for a program
+pub fn infix_group_type_stack<F>(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, grp_cb: &mut F) -> Result<InfixGrpTypeElem, ()>
+where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
+    stack.clear();
+
     let build_grp = |other_op, t1, op, t2, inc_right, grp_cb: &mut F| -> Result<InfixGrpTypeElem, ()> {
-        let mut grp = Vec::new();
+        let mut grp = Vec::with_capacity(8);
 
         match t1 {
             InfixGrpTypeElem::Group(mut t1_terms)
@@ -223,7 +231,7 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
         Ok(InfixGrpTypeElem::Term(Box::new(t1), op, Box::new(t2)))
     };
 
-    let outer_term = program.process(&mut stack, |n| {
+    let outer_term = program.process(stack, |n| {
         Ok(InfixGrpTypeElem::Number(n))
     }, |t1, op, t2| {
         match op {

@@ -1,9 +1,7 @@
 use crate::progop::*;
 use crate::infix::*;
-use crate::duplicates::*;
 use colored::*;
 use itertools::Itertools;
-use std::collections::HashSet;
 use std::convert;
 
 /// Holds a single RPN program
@@ -126,11 +124,6 @@ impl Program {
         }
 
         Ok(stack.pop().unwrap())
-    }
-
-    /// Returns false if the program contains a calculation which would be covered by another program
-    pub fn duplicate_filter(&self, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
-        !duplicated(self, set)
     }
 
     /// Returns the formatted steps of a program for a given set of numbers

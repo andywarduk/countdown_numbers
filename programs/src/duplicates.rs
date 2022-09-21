@@ -4,8 +4,9 @@ use crate::program::*;
 use crate::progop::*;
 use crate::infix::*;
 
-pub fn duplicated(program: &Program, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
-    infix_group_type(program, &mut |grp| {
+/// Returns true if the program would be duplicated by rearranging the terms of the equation
+pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
+    infix_group_type_stack(program, stack, &mut |grp| {
         let mut second_op = false;
         let mut in_terms = false;
         let mut last_num: u8 = 0;
@@ -46,11 +47,10 @@ pub fn duplicated(program: &Program, set: &mut HashSet<InfixGrpTypeElem>) -> boo
 
         true
     }).and_then(|grp| {
-        if set.contains(&grp) {
-            Err(())
-        } else {
-            set.insert(grp);
+        if set.insert(grp) {
             Ok(())
+        } else {
+            Err(())
         }
     }).is_err()
 }
@@ -80,9 +80,12 @@ mod tests {
         let infix_nums = infix_simplify_type(&program).colour(numbers, false);
 
         // Is a duplicate?
+        let mut stack = Vec::new();
         let mut set = HashSet::new();
-        let duplicate = duplicated(&program, &mut set);
 
+        let duplicate = duplicated(&program, &mut stack, &mut set);
+
+        // Print details
         println!("RPN: {}, infix (elems): {}, infix (nums): {}, dup : {}, groups: {}",
             rpn,
             infix_elem,
