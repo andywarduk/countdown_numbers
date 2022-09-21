@@ -1,2 +1,4 @@
 /target
 solutions*
+flamegraph.svg
+perf.data*

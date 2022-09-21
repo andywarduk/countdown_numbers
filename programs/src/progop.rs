@@ -36,7 +36,7 @@ impl ProgOp {
     }
     
     /// Returns the string representation of a program operator, optionally coloured
-    pub fn colour(&self, colour: bool, numbers: &[u32]) -> String {
+    pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
         let mut res = match self {
             ProgOp::Number(n) => numbers[*n as usize].to_string(),
             ProgOp::OpAdd => "+".to_string(),
@@ -75,6 +75,5 @@ impl fmt::Debug for ProgOp {
 #[derive(Debug, PartialEq, Clone)]
 pub enum ProgOpAssoc {
     Left,
-    Right,
     Both
 }

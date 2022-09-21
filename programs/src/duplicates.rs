@@ -1,55 +1,58 @@
+use std::collections::HashSet;
+
 use crate::program::*;
 use crate::progop::*;
 use crate::infix::*;
 
-pub fn duplicated(program: &Program) -> Result<Vec<InfixGrpElem>, ()> {
-    let infix = program_infixtree(program);
-    duplicated_infix(&infix)
-}
+pub fn duplicated(program: &Program, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
+    infix_group_type(program, &mut |grp| {
+        let mut second_op = false;
+        let mut in_terms = false;
+        let mut last_num: u8 = 0;
 
-fn duplicated_infix(infix: &Infix) -> Result<Vec<InfixGrpElem>, ()> {
-    infix_group(infix, InfixGrpMode::Type, &mut |grp| {
-        // Returns true if :
-        // 1. Numbers for a group of operators are not in ascending order
-        // 2. Terms must follow numbers for the same operator
-        // 3. Operators must appear in the order * then / or + then -
+        for (i, (op, e)) in grp.iter().enumerate() {
+            if i > 0 {
+                match *op {
+                    ProgOp::OpAdd | ProgOp::OpMul => {
+                        if second_op {
+                            // Got first operator after the second
+                            return false
+                        }
+                    }
+                    ProgOp::OpSub | ProgOp::OpDiv => {
+                        if !second_op {
+                            second_op = true;
+                            in_terms = false;
+                            last_num = 0;
+                        }
+                    }
+                    _ => panic!("Operator expected")
+                }
+            }
 
-        let mut first_op = true;
-        let mut cur_num = -1;
-
-        for e in grp {
             match e {
-                InfixGrpElem::Number(n) => {
-                    let cmp = *n as i32;
-
-                    if cmp < cur_num {
+                InfixGrpTypeElem::Number(n) => {
+                    if in_terms || *n < last_num {
+                        // Got a number after a term or number element is bigger
                         return false;
                     }
-                    cur_num = cmp;
+                    last_num = *n;
                 }
-                InfixGrpElem::Op(op) => {
-                    // Got an operator
-                    let is_first_op = *op == ProgOp::OpAdd || *op == ProgOp::OpMul;
-
-                    if first_op != is_first_op {
-                        // Operator changed
-                        if is_first_op {
-                            return false;
-                        }
-
-                        cur_num = -1;
-                        first_op = false;
-                    }
-                }
-                InfixGrpElem::Term(_) => {
-                    // Got a term
-                    cur_num = i32::MAX;
+                InfixGrpTypeElem::Group(_) | InfixGrpTypeElem::Term(_, _, _) => {
+                    in_terms = true;
                 }
             }
         }
 
         true
-    })
+    }).and_then(|grp| {
+        if set.contains(&grp) {
+            Err(())
+        } else {
+            set.insert(grp);
+            Ok(())
+        }
+    }).is_err()
 }
 
 #[cfg(test)]
@@ -61,28 +64,29 @@ mod tests {
         // Create program
         let program: Program = rpn.into();
 
-        // Get infix tree
-        let infix_tree = program_infixtree(&program);
-
-        // Get infix groups
+        // Create element vector
         let elems: Vec<u32> = (0..numbers.len()).map(|i| i as u32).collect();
 
+        // Get infix groups
         let mut groups = Vec::new();
 
-        assert!(infix_group(&infix_tree, InfixGrpMode::Type, &mut |grp| {
-            groups.push(format!("{}", grp.iter().map(|e| e.colour(false, &elems)).join(" ")));
+        infix_group_type(&program, &mut |grp| {
+            groups.push(format!("{}", InfixGrpTypeElem::Group(grp.clone()).colour(&elems, false)));
             true
-        }).is_ok());
-
-        // Get simplified infix string
-        let infix = infix_simplify(&infix_tree, InfixGrpMode::Type).colour(false, numbers);
+        }).unwrap();
+        
+        // Get simplified infix strings
+        let infix_elem = infix_simplify_type(&program).colour(&elems, false);
+        let infix_nums = infix_simplify_type(&program).colour(numbers, false);
 
         // Is a duplicate?
-        let duplicate = duplicated(&program).is_err();
+        let mut set = HashSet::new();
+        let duplicate = duplicated(&program, &mut set);
 
-        println!("RPN: {}, infix: {}, dup : {}, groups: {}",
+        println!("RPN: {}, infix (elems): {}, infix (nums): {}, dup : {}, groups: {}",
             rpn,
-            infix,
+            infix_elem,
+            infix_nums,
             duplicate,
             groups.iter().join(", ")
         );
@@ -96,7 +100,7 @@ mod tests {
         assert_eq!(exp_ans, result);
 
         // Check infix
-        assert_eq!(exp_infix, infix);
+        assert_eq!(exp_infix, infix_nums);
 
         // Check groups
         assert_eq!(exp_grps, groups.len());
@@ -130,7 +134,7 @@ mod tests {
         // (0 - 1) + 2 == 0 - 1 + 2 == 1
         test_int("2 1 - 0 +", &[5, 10, 30], "30 - 10 + 5", 25, 1, true);
 
-        // 0 - (1 + 2) == -3 == 0 - 1 + 2 == 1
+        // 0 - (1 + 2) == -3 != 0 - 1 + 2 == 1
         test_int("0 1 2 + -", &[100, 10, 30], "100 - (10 + 30)", 60, 2, false);
 
         // (0 + 1) + (2 + 3) == 0 + 1 + 2 + 3
@@ -167,6 +171,9 @@ mod tests {
         // RPN: 75 50 100 10 + 10 / - +
         // Equation: 75 + 50 - (100 + 10) / 10 = 114
         test_int("1 2 0 3 + 4 / - +", &[100, 75, 50, 10, 10],"75 + 50 - ((100 + 10) / 10)", 114, 3, false);
+        // RPN: 100 25 10 × 10 - × 75 50 + /
+        // Equation: 100 × (25 × 10 - 10) / (75 + 50) = 192
+        test_int("0 3 4 * 5 - * 1 2 + /", &[100, 75, 50, 25, 10, 10], "100 × ((25 × 10) - 10) / (75 + 50)", 192, 4, false); 
     }
 
     #[test]
@@ -196,11 +203,14 @@ mod tests {
             "0 + 1 + 2 + 3"
         ];
 
+        for prog in &programs.programs {
+            println!("Equation: {}", prog.infix_type(&numbers, true));            
+        }
+
         assert_eq!(expected.len(), programs.len());
 
         for (exp, prog) in expected.iter().zip(programs.programs.iter()) {
-            println!("RPN: {}  Equation: {}", prog.rpn(&numbers, true), prog.infix(&numbers, InfixGrpMode::Full, true));
-            assert_eq!(*exp, prog.infix(&numbers, InfixGrpMode::Full, false))
+            assert_eq!(*exp, prog.infix_type(&numbers, false))
         }
     }
 

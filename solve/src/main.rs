@@ -62,7 +62,7 @@ fn main() {
                         if num_outputs > 1 {
                             print!("Equation: ");
                         }
-                        println!("{}", s.program_infix(&args.cards, InfixGrpMode::Full));
+                        println!("{}", s.program_infix_type(&args.cards));
                     }
 
                     if args.output.contains(Output::STEPS) {

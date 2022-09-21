@@ -157,11 +157,16 @@ impl<'a> Solution<'a> {
         }
     }
 
-    /// Returns the program equation in infix style
-    pub fn program_infix(&self, numbers: &[u32], mode: InfixGrpMode) -> String {
-        format!("{} {} {}", self.program.infix(numbers, mode, true), "=".dimmed(), self.result)
+    /// Returns the program equation in full simplified infix style
+    pub fn program_infix_full(&self, numbers: &[u32]) -> String {
+        format!("{} {} {}", self.program.infix_full(numbers, true), "=".dimmed(), self.result)
     }
 
+    /// Returns the program equation in full simplified infix style
+    pub fn program_infix_type(&self, numbers: &[u32]) -> String {
+        format!("{} {} {}", self.program.infix_type(numbers, true), "=".dimmed(), self.result)
+    }
+    
     /// Returns the program equation in infix style in discrete steps
     pub fn program_steps(&self, numbers: &[u32]) -> Vec<String> {
         self.program.steps(numbers, true)

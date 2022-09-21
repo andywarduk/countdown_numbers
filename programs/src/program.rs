@@ -37,25 +37,25 @@ impl Program {
     }
 
     /// Processes a program
-    pub fn process<S, N, T>(&self, stack: &mut Vec<S>, mut num_cb: N, mut op_cb: T) -> S 
-    where N: FnMut(u8) -> S,
-          T: FnMut(S, ProgOp, S) -> S {
+    pub fn process<S, N, T>(&self, stack: &mut Vec<S>, mut num_cb: N, mut op_cb: T) -> Result<S, ()> 
+    where N: FnMut(u8) -> Result<S, ()>,
+          T: FnMut(S, ProgOp, S) -> Result<S, ()> {
         stack.clear();
 
         for op in &self.instructions {
             match op {
                 ProgOp::Number(n) => {
-                    stack.push(num_cb(*n))
+                    stack.push(num_cb(*n)?)
                 }
                 _ => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
-                    stack.push(op_cb(n2, *op, n1))
+                    stack.push(op_cb(n2, *op, n1)?)
                 }
             }
         }
     
-        stack.pop().unwrap()
+        Ok(stack.pop().unwrap())
     }
     
     /// Runs the program with a given set of numbers and preallocated stack
@@ -129,17 +129,8 @@ impl Program {
     }
 
     /// Returns false if the program contains a calculation which would be covered by another program
-    pub fn duplicate_filter(&self, set: &mut HashSet<Vec<InfixGrpElem>>) -> bool {
-        if let Ok(infixgrp) = duplicated(&self) {
-            if set.contains(&infixgrp) {
-                false
-            } else {
-                set.insert(infixgrp.clone());
-                true
-            }
-        } else {
-            false
-        }
+    pub fn duplicate_filter(&self, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
+        !duplicated(self, set)
     }
 
     /// Returns the formatted steps of a program for a given set of numbers
@@ -148,7 +139,7 @@ impl Program {
         let mut stack: Vec<(u32, String)> = Vec::with_capacity(numbers.len());
 
         self.process(&mut stack, |n| {
-            (numbers[n as usize], ProgOp::Number(n).colour(colour, numbers)) 
+            Ok((numbers[n as usize], ProgOp::Number(n).colour(numbers, colour)))
         }, |(n2, s2), op, (n1, s1)| {
             let ans = match op {
                 ProgOp::OpAdd => n2 + n1,
@@ -162,23 +153,27 @@ impl Program {
 
             let equals = if colour { "=".dimmed().to_string() } else { "=".to_string() };
 
-            steps.push(format!("{} {} {} {} {}", s2, op.colour(colour, numbers), s1, equals, ans_str));
+            steps.push(format!("{} {} {} {} {}", s2, op.colour(numbers, colour), s1, equals, ans_str));
 
-            (ans, ans_str)
-        });
+            Ok((ans, ans_str))
+        }).unwrap();
 
         steps
     }
 
-    /// Converts the RPN program to infix equation
-    pub fn infix(&self, numbers: &[u32], mode: InfixGrpMode, colour: bool) -> String {
-        let infix = program_infixtree(&self);
-        infix_simplify(&infix, mode).colour(colour, numbers)
+    /// Converts the RPN program to fully simplified infix equation
+    pub fn infix_full(&self, numbers: &[u32], colour: bool) -> String {
+        infix_simplify_full(&self).colour(numbers, colour)
     }
 
+    /// Converts the RPN program to operator type grouped infix equation
+    pub fn infix_type(&self, numbers: &[u32], colour: bool) -> String {
+        infix_simplify_type(&self).colour(numbers, colour)
+    }
+    
     /// Converts the RPN program to a string for a given set of numbers
     pub fn rpn(&self, numbers: &[u32], colour: bool) -> String {
-        self.instructions.iter().map(|i| i.colour(colour, numbers)).join(" ")
+        self.instructions.iter().map(|i| i.colour(numbers, colour)).join(" ")
     }
 
 }
