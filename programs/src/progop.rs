@@ -13,28 +13,6 @@ pub enum ProgOp {
 
 impl ProgOp {
 
-    /// Returns the associativity of the operator
-    pub fn associativity(&self) -> ProgOpAssoc {
-        match self {
-            ProgOp::Number(_) => panic!("No associativity for number"),
-            ProgOp::OpAdd => ProgOpAssoc::Both,
-            ProgOp::OpSub => ProgOpAssoc::Left,
-            ProgOp::OpMul => ProgOpAssoc::Both,
-            ProgOp::OpDiv => ProgOpAssoc::Left,
-        }
-    }
-
-    /// Returns the precedence of the operator
-    pub fn precedence(&self) -> u8 {
-        match self {
-            ProgOp::Number(_) => panic!("No precedence for number"),
-            ProgOp::OpAdd => 2,
-            ProgOp::OpSub => 2,
-            ProgOp::OpMul => 3,
-            ProgOp::OpDiv => 3,
-        }
-    }
-    
     /// Returns the string representation of a program operator, optionally coloured
     pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
         let mut res = match self {
@@ -69,11 +47,4 @@ impl fmt::Debug for ProgOp {
         }
     }
 
-}
-
-// Operator associativity
-#[derive(Debug, PartialEq, Clone)]
-pub enum ProgOpAssoc {
-    Left,
-    Both
 }

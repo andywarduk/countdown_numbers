@@ -1,109 +1,5 @@
-use itertools::Itertools;
-
 use crate::progop::*;
 use crate::program::*;
-
-/// Infix operator tree
-#[derive(Debug, PartialEq, Eq)]
-pub enum Infix {
-    Number(u8),
-    Term(Box<Infix>, ProgOp, Box<Infix>)
-}
-
-/// Generates an infix operator tree from the program RPN
-fn program_infixtree(program: &Program) -> Infix {
-    let mut stack: Vec<Infix> = Vec::with_capacity(program.len());
-
-    program.process(&mut stack, |n| {
-        Ok(Infix::Number(n))
-    }, |n2, op, n1| {
-        Ok(Infix::Term(Box::new(n2), op, Box::new(n1)))
-    }).unwrap()
-}
-
-/// Full simplification equation element
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub enum InfixGrpFullElem {
-    Number(u8),
-    Op(ProgOp),
-    Term(Vec<InfixGrpFullElem>),
-}
-
-impl InfixGrpFullElem {
-
-    /// Formats a full simplification equation element with optional colour
-    pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
-        self.colour_internal(numbers, colour, false)
-    }
-
-    fn colour_internal(&self, numbers: &[u32], colour: bool, bracket: bool) -> String {
-        match self {
-            InfixGrpFullElem::Number(n) => ProgOp::Number(*n).colour(numbers, colour),
-            InfixGrpFullElem::Op(o) => o.colour(numbers, colour),
-            InfixGrpFullElem::Term(t) => {
-                let inner = t.iter().map(|e| e.colour_internal(numbers, colour, true)).join(" ");
-                
-                if bracket {
-                    format!("({})", inner)
-                } else {
-                    inner
-                }
-            }
-        }
-    }
-
-}
-
-/// Returns a fully simplified equation tree from the infix tree
-fn infix_group_full<F>(infix: &Infix, cb: &mut F) -> Result<Vec<InfixGrpFullElem>, ()>
-where F: FnMut(&Vec<InfixGrpFullElem>) -> bool {
-    let grp = infix_group_recurse_full(infix, cb, 0, 0)?;
-
-    if cb(&grp) {
-        Ok(grp)
-    } else {
-        Err(())
-    }
-}
-
-fn infix_group_recurse_full<F>(infix: &Infix, cb: &mut F, parent_prec: u32, add_prec: u32) -> Result<Vec<InfixGrpFullElem>, ()>
-where F: FnMut(&Vec<InfixGrpFullElem>) -> bool {
-    match infix {
-        Infix::Number(n) => Ok(vec![InfixGrpFullElem::Number(*n)]),
-        Infix::Term(left, op, right) => {
-            let mut result = Vec::with_capacity(10);
-            
-            let assoc = op.associativity();
-            let precedence = op.precedence() as u32 * 2;
-
-            let mut right_add = 0;
-
-            if assoc == ProgOpAssoc::Left {
-                right_add = 1;
-            }
-
-            let mut lhs = infix_group_recurse_full(left, cb, precedence, 0)?;
-            let mut rhs = infix_group_recurse_full(right, cb, precedence, right_add)?;
-
-            result.append(&mut lhs);
-            result.push(InfixGrpFullElem::Op(*op));
-            result.append(&mut rhs);
-
-            if parent_prec + add_prec > precedence {
-                if !cb(&result) { return Err(()) };
-                result = vec![InfixGrpFullElem::Term(result)];
-            }
-
-            Ok(result)
-        }
-    }
-}
-
-/// Returns a fully simplified equation tree for a program
-pub fn infix_simplify_full(program: &Program) -> InfixGrpFullElem {
-    let infix = program_infixtree(program);
-    InfixGrpFullElem::Term(infix_group_full(&infix, &mut |_| true).unwrap())
-}
 
 /// Operator type simplification equation element
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -158,16 +54,21 @@ impl InfixGrpTypeElem {
 
 }
 
-/// Returns an operator type simplified equation tree for a program
-pub fn infix_group_type<F>(program: &Program, grp_cb: &mut F) -> Result<InfixGrpTypeElem, ()>
-where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
-    let mut stack = Vec::new();
-
-    infix_group_type_stack(program, &mut stack, grp_cb)
+/// Returns the infix structure for the program
+pub fn infix_group(program: &Program) -> InfixGrpTypeElem {
+    infix_group_cb(program, &mut |_| true).unwrap()
 }
 
 /// Returns an operator type simplified equation tree for a program
-pub fn infix_group_type_stack<F>(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, grp_cb: &mut F) -> Result<InfixGrpTypeElem, ()>
+pub fn infix_group_cb<F>(program: &Program, grp_cb: &mut F) -> Result<InfixGrpTypeElem, ()>
+where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
+    let mut stack = Vec::new();
+
+    infix_group_cb_stack(program, &mut stack, grp_cb)
+}
+
+/// Returns an operator type simplified equation tree for a program
+pub fn infix_group_cb_stack<F>(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, grp_cb: &mut F) -> Result<InfixGrpTypeElem, ()>
 where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
     stack.clear();
 
@@ -262,17 +163,13 @@ where F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool {
     Ok(outer_term)
 }
 
-pub fn infix_simplify_type(program: &Program) -> InfixGrpTypeElem {
-   infix_group_type(program, &mut |_| true).unwrap()
-}
-
 // Tests
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn test_rpn_infix(rpn: &str, exp_full: &str, exp_type: &str) {
+    fn test_rpn_infix(rpn: &str, exp_infix: &str) {
         let program: Program = rpn.into();
 
         let num_count = program.instructions().iter().filter(|i| match i {
@@ -282,13 +179,13 @@ mod tests {
 
         let numbers: Vec<u32> = (0..num_count).map(|i| i as u32).collect();
 
-        test_program_infix(&program, exp_full, exp_type, &numbers);
+        test_program_infix(&program, exp_infix, &numbers);
     }
 
-    fn test_rpn_infix_and_result(rpn: &str, exp_full: &str, exp_type: &str, numbers: &[u32], exp_ans: Result<u32, ProgErr>) {
+    fn test_rpn_infix_and_result(rpn: &str, exp_infix: &str, numbers: &[u32], exp_ans: Result<u32, ProgErr>) {
         let program: Program = rpn.into();
 
-        test_program_infix(&program, exp_full, exp_type, numbers);
+        test_program_infix(&program, exp_infix, numbers);
 
         let mut stack = Vec::new();
 
@@ -297,80 +194,78 @@ mod tests {
         assert_eq!(exp_ans, ans);
     }
 
-    fn test_program_infix(program: &Program, exp_full: &str, exp_type: &str, numbers: &[u32]) {
-        let infix_full = infix_simplify_full(&program);
-        let infix_type = infix_simplify_type(&program);
+    fn test_program_infix(program: &Program, exp_infix: &str, numbers: &[u32]) {
+        let infix = infix_group(&program);
 
-        println!("RPN: {}, infix (full): {}, infix (type) {}",
-            program.rpn(numbers, false), infix_full.colour(numbers, false), infix_type.colour(numbers, false));
+        println!("RPN: {}, infix: {}",
+            program.rpn(numbers, false), infix.colour(numbers, false));
 
-        assert_eq!(exp_full, infix_full.colour(numbers, false));
-        assert_eq!(exp_type, infix_type.colour(numbers, false));
+        assert_eq!(exp_infix, infix.colour(numbers, false));
     }
 
     #[test]
     fn simplify_tests() {
-        test_rpn_infix("0 1 2 3 + + +", "0 + 1 + 2 + 3", "0 + 1 + 2 + 3");
-        test_rpn_infix("0 1 2 3 - - -", "0 - (1 - (2 - 3))", "0 - (1 - (2 - 3))");
-        test_rpn_infix("0 1 2 3 * * *", "0 × 1 × 2 × 3", "0 × 1 × 2 × 3");
-        test_rpn_infix("0 1 2 3 / / /", "0 / (1 / (2 / 3))", "0 / (1 / (2 / 3))");
+        test_rpn_infix("0 1 2 3 + + +", "0 + 1 + 2 + 3");
+        test_rpn_infix("0 1 2 3 - - -", "0 - (1 - (2 - 3))");
+        test_rpn_infix("0 1 2 3 * * *", "0 × 1 × 2 × 3");
+        test_rpn_infix("0 1 2 3 / / /", "0 / (1 / (2 / 3))");
 
-        test_rpn_infix("0 1 - 2 - 3 -", "0 - 1 - 2 - 3", "0 - 1 - 2 - 3");
-        test_rpn_infix("0 1 / 2 / 3 /", "0 / 1 / 2 / 3", "0 / 1 / 2 / 3");
+        test_rpn_infix("0 1 - 2 - 3 -", "0 - 1 - 2 - 3");
+        test_rpn_infix("0 1 / 2 / 3 /", "0 / 1 / 2 / 3");
 
-        test_rpn_infix("0 1 2 + -", "0 - (1 + 2)", "0 - (1 + 2)");
-        test_rpn_infix("0 1 - 2 +", "0 - 1 + 2", "0 - 1 + 2");
-        test_rpn_infix("0 1 2 - +", "0 + 1 - 2", "0 + 1 - 2");
-        test_rpn_infix("0 1 + 2 -", "0 + 1 - 2", "0 + 1 - 2");
+        test_rpn_infix("0 1 2 + -", "0 - (1 + 2)");
+        test_rpn_infix("0 1 - 2 +", "0 - 1 + 2");
+        test_rpn_infix("0 1 2 - +", "0 + 1 - 2");
+        test_rpn_infix("0 1 + 2 -", "0 + 1 - 2");
 
-        test_rpn_infix("0 1 2 3 + + -", "0 - (1 + 2 + 3)", "0 - (1 + 2 + 3)");
-        test_rpn_infix("0 1 2 3 + - +", "0 + 1 - (2 + 3)", "0 + 1 - (2 + 3)");
-        test_rpn_infix("0 1 2 3 + - -", "0 - (1 - (2 + 3))", "0 - (1 - (2 + 3))");
-        test_rpn_infix("0 1 2 3 - + +", "0 + 1 + 2 - 3", "0 + 1 + 2 - 3");
-        test_rpn_infix("0 1 2 3 - + -", "0 - (1 + 2 - 3)", "0 - (1 + 2 - 3)");
-        test_rpn_infix("0 1 2 3 - - +", "0 + 1 - (2 - 3)", "0 + 1 - (2 - 3)");
+        test_rpn_infix("0 1 2 3 + + -", "0 - (1 + 2 + 3)");
+        test_rpn_infix("0 1 2 3 + - +", "0 + 1 - (2 + 3)");
+        test_rpn_infix("0 1 2 3 + - -", "0 - (1 - (2 + 3))");
+        test_rpn_infix("0 1 2 3 - + +", "0 + 1 + 2 - 3");
+        test_rpn_infix("0 1 2 3 - + -", "0 - (1 + 2 - 3)");
+        test_rpn_infix("0 1 2 3 - - +", "0 + 1 - (2 - 3)");
 
-        test_rpn_infix("0 1 2 + 3 + +", "0 + 1 + 2 + 3", "0 + 1 + 2 + 3");
-        test_rpn_infix("0 1 2 + 3 + -", "0 - (1 + 2 + 3)", "0 - (1 + 2 + 3)");
-        test_rpn_infix("0 1 2 + 3 - +", "0 + 1 + 2 - 3", "0 + 1 + 2 - 3");
-        test_rpn_infix("0 1 2 + 3 - -", "0 - (1 + 2 - 3)", "0 - (1 + 2 - 3)");
-        test_rpn_infix("0 1 2 - 3 + +", "0 + 1 - 2 + 3", "0 + 1 - 2 + 3");
-        test_rpn_infix("0 1 2 - 3 + -", "0 - (1 - 2 + 3)", "0 - (1 - 2 + 3)");
-        test_rpn_infix("0 1 2 - 3 - +", "0 + 1 - 2 - 3", "0 + 1 - 2 - 3");
-        test_rpn_infix("0 1 2 - 3 - -", "0 - (1 - 2 - 3)", "0 - (1 - 2 - 3)");
+        test_rpn_infix("0 1 2 + 3 + +", "0 + 1 + 2 + 3");
+        test_rpn_infix("0 1 2 + 3 + -", "0 - (1 + 2 + 3)");
+        test_rpn_infix("0 1 2 + 3 - +", "0 + 1 + 2 - 3");
+        test_rpn_infix("0 1 2 + 3 - -", "0 - (1 + 2 - 3)");
+        test_rpn_infix("0 1 2 - 3 + +", "0 + 1 - 2 + 3");
+        test_rpn_infix("0 1 2 - 3 + -", "0 - (1 - 2 + 3)");
+        test_rpn_infix("0 1 2 - 3 - +", "0 + 1 - 2 - 3");
+        test_rpn_infix("0 1 2 - 3 - -", "0 - (1 - 2 - 3)");
 
-        test_rpn_infix("0 1 2 + + 3 +", "0 + 1 + 2 + 3", "0 + 1 + 2 + 3");
-        test_rpn_infix("0 1 2 + + 3 -", "0 + 1 + 2 - 3", "0 + 1 + 2 - 3");
-        test_rpn_infix("0 1 2 + - 3 +", "0 - (1 + 2) + 3", "0 - (1 + 2) + 3");
-        test_rpn_infix("0 1 2 + - 3 -", "0 - (1 + 2) - 3", "0 - (1 + 2) - 3");
-        test_rpn_infix("0 1 2 - + 3 +", "0 + 1 - 2 + 3", "0 + 1 - 2 + 3");
-        test_rpn_infix("0 1 2 - + 3 -", "0 + 1 - 2 - 3", "0 + 1 - 2 - 3");
-        test_rpn_infix("0 1 2 - - 3 +", "0 - (1 - 2) + 3", "0 - (1 - 2) + 3");
-        test_rpn_infix("0 1 2 - - 3 -", "0 - (1 - 2) - 3", "0 - (1 - 2) - 3");
+        test_rpn_infix("0 1 2 + + 3 +", "0 + 1 + 2 + 3");
+        test_rpn_infix("0 1 2 + + 3 -", "0 + 1 + 2 - 3");
+        test_rpn_infix("0 1 2 + - 3 +", "0 - (1 + 2) + 3");
+        test_rpn_infix("0 1 2 + - 3 -", "0 - (1 + 2) - 3");
+        test_rpn_infix("0 1 2 - + 3 +", "0 + 1 - 2 + 3");
+        test_rpn_infix("0 1 2 - + 3 -", "0 + 1 - 2 - 3");
+        test_rpn_infix("0 1 2 - - 3 +", "0 - (1 - 2) + 3");
+        test_rpn_infix("0 1 2 - - 3 -", "0 - (1 - 2) - 3");
 
-        test_rpn_infix("0 1 + 2 + 3 +", "0 + 1 + 2 + 3", "0 + 1 + 2 + 3");
-        test_rpn_infix("0 1 + 2 + 3 -", "0 + 1 + 2 - 3", "0 + 1 + 2 - 3");
-        test_rpn_infix("0 1 + 2 - 3 +", "0 + 1 - 2 + 3", "0 + 1 - 2 + 3");
-        test_rpn_infix("0 1 + 2 - 3 -", "0 + 1 - 2 - 3", "0 + 1 - 2 - 3");
-        test_rpn_infix("0 1 - 2 + 3 +", "0 - 1 + 2 + 3", "0 - 1 + 2 + 3");
-        test_rpn_infix("0 1 - 2 + 3 -", "0 - 1 + 2 - 3", "0 - 1 + 2 - 3");
-        test_rpn_infix("0 1 - 2 - 3 +", "0 - 1 - 2 + 3", "0 - 1 - 2 + 3");
-        test_rpn_infix("0 1 - 2 - 3 -", "0 - 1 - 2 - 3", "0 - 1 - 2 - 3");
+        test_rpn_infix("0 1 + 2 + 3 +", "0 + 1 + 2 + 3");
+        test_rpn_infix("0 1 + 2 + 3 -", "0 + 1 + 2 - 3");
+        test_rpn_infix("0 1 + 2 - 3 +", "0 + 1 - 2 + 3");
+        test_rpn_infix("0 1 + 2 - 3 -", "0 + 1 - 2 - 3");
+        test_rpn_infix("0 1 - 2 + 3 +", "0 - 1 + 2 + 3");
+        test_rpn_infix("0 1 - 2 + 3 -", "0 - 1 + 2 - 3");
+        test_rpn_infix("0 1 - 2 - 3 +", "0 - 1 - 2 + 3");
+        test_rpn_infix("0 1 - 2 - 3 -", "0 - 1 - 2 - 3");
     }
 
     #[test]
     fn group_tests() {
         // 1 + (2 - ((0 + 3) / 4)) => 75 + (50 - ((100 + 25) / 5))
         test_rpn_infix_and_result("1 2 0 3 + 4 / - +",
-            "75 + 50 - (100 + 25) / 5", "75 + 50 - ((100 + 25) / 5)",
+            "75 + 50 - ((100 + 25) / 5)",
             &[100, 75, 50, 25, 5], Ok(100));
         // 0 * (((3 * 4) - 5) / (1 + 2)) => 100 * (((25 * 10) - 5) / (75 + 50)) = 196
         test_rpn_infix_and_result("0 3 4 * 5 - 1 2 + / *",
-            "100 × (25 × 10 - 5) / (75 + 50)", "100 × ((25 × 10) - 5) / (75 + 50)",
+            "100 × ((25 × 10) - 5) / (75 + 50)",
             &[100, 75, 50, 25, 10, 5], Err(ProgErr::NonInteger));
         // 0 * ((3 * 4) - 5) / (1 + 2) => 100 * ((25 * 10) - 5) / (75 + 50) = 196
         test_rpn_infix_and_result("0 3 4 * 5 - * 1 2 + /",
-            "100 × (25 × 10 - 5) / (75 + 50)", "100 × ((25 × 10) - 5) / (75 + 50)",
+            "100 × ((25 × 10) - 5) / (75 + 50)",
             &[100, 75, 50, 25, 10, 5], Ok(196));
     }
 

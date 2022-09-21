@@ -2,7 +2,6 @@ use crate::progop::*;
 use crate::infix::*;
 use colored::*;
 use itertools::Itertools;
-use std::convert;
 
 /// Holds a single RPN program
 #[derive(Eq, PartialEq)]
@@ -154,14 +153,9 @@ impl Program {
         steps
     }
 
-    /// Converts the RPN program to fully simplified infix equation
-    pub fn infix_full(&self, numbers: &[u32], colour: bool) -> String {
-        infix_simplify_full(&self).colour(numbers, colour)
-    }
-
     /// Converts the RPN program to operator type grouped infix equation
-    pub fn infix_type(&self, numbers: &[u32], colour: bool) -> String {
-        infix_simplify_type(&self).colour(numbers, colour)
+    pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
+        infix_group(&self).colour(numbers, colour)
     }
     
     /// Converts the RPN program to a string for a given set of numbers
@@ -171,7 +165,7 @@ impl Program {
 
 }
 
-impl convert::From<Vec<ProgOp>> for Program {
+impl From<Vec<ProgOp>> for Program {
 
     fn from(instructions: Vec<ProgOp>) -> Self {
         Program {
@@ -181,7 +175,7 @@ impl convert::From<Vec<ProgOp>> for Program {
 
 }
 
-impl convert::From<&str> for Program {
+impl From<&str> for Program {
 
     fn from(rpn: &str) -> Self {
         let instructions = rpn.chars().filter_map(|c| {

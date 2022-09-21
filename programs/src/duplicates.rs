@@ -6,7 +6,7 @@ use crate::infix::*;
 
 /// Returns true if the program would be duplicated by rearranging the terms of the equation
 pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
-    infix_group_type_stack(program, stack, &mut |grp| {
+    infix_group_cb_stack(program, stack, &mut |grp| {
         let mut second_op = false;
         let mut in_terms = false;
         let mut last_num: u8 = 0;
@@ -59,6 +59,7 @@ pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mu
 mod tests {
     use crate::*;
     use super::*;
+    use itertools::Itertools;
 
     fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: bool) {
         // Create program
@@ -70,14 +71,14 @@ mod tests {
         // Get infix groups
         let mut groups = Vec::new();
 
-        infix_group_type(&program, &mut |grp| {
+        infix_group_cb(&program, &mut |grp| {
             groups.push(format!("{}", InfixGrpTypeElem::Group(grp.clone()).colour(&elems, false)));
             true
         }).unwrap();
         
         // Get simplified infix strings
-        let infix_elem = infix_simplify_type(&program).colour(&elems, false);
-        let infix_nums = infix_simplify_type(&program).colour(numbers, false);
+        let infix_elem = infix_group(&program).colour(&elems, false);
+        let infix_nums = infix_group(&program).colour(numbers, false);
 
         // Is a duplicate?
         let mut stack = Vec::new();
@@ -207,13 +208,13 @@ mod tests {
         ];
 
         for prog in &programs.programs {
-            println!("Equation: {}", prog.infix_type(&numbers, true));            
+            println!("Equation: {}", prog.infix(&numbers, true));            
         }
 
         assert_eq!(expected.len(), programs.len());
 
         for (exp, prog) in expected.iter().zip(programs.programs.iter()) {
-            assert_eq!(*exp, prog.infix_type(&numbers, false))
+            assert_eq!(*exp, prog.infix(&numbers, false))
         }
     }
 
