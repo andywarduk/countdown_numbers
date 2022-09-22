@@ -1,3 +1,7 @@
+#![warn(missing_docs)]
+
+//! This module 
+
 pub mod duplicates;
 pub mod generate;
 pub mod infix;
@@ -10,6 +14,8 @@ use generate::*;
 use progop::*;
 use program::*;
 
+/// RPN programs
+
 /// Collection of RPN program to run for a set of numbers
 pub struct Programs {
     programs: Vec<Program>,
@@ -18,14 +24,14 @@ pub struct Programs {
 
 impl Programs {
     /// Create a new Programs struct
-    pub fn new(nums: usize, inc_commutative: bool) -> Self {
+    pub fn new(nums: usize, inc_duplicated: bool) -> Self {
         let operators = vec![ProgOp::OpAdd, ProgOp::OpSub, ProgOp::OpMul, ProgOp::OpDiv];
 
-        Self::new_with_operators(nums, inc_commutative, operators)
+        Self::new_with_operators(nums, inc_duplicated, operators)
     }
 
     /// Create a new Programs struct with a given set of valid operators
-    pub fn new_with_operators(nums: usize, inc_commutative: bool, operators: Vec<ProgOp>) -> Self {
+    pub fn new_with_operators(nums: usize, inc_duplicated: bool, operators: Vec<ProgOp>) -> Self {
         let mut programs = Programs { programs: Vec::new(), nums };
 
         for num_cnt in 1..=nums {
@@ -36,7 +42,7 @@ impl Programs {
             let op_comb = op_combs(num_cnt, &operators);
 
             // Generate programs
-            generate_num_programs(&mut programs, nums, num_cnt, &op_count, &op_comb, inc_commutative);
+            generate_num_programs(&mut programs, nums, num_cnt, &op_count, &op_comb, inc_duplicated);
         }
 
         programs
@@ -111,15 +117,24 @@ impl Programs {
 /// Holds the results of running all programs with a set of numbers
 #[derive(Default)]
 pub struct Results<'a> {
-    pub solutions: Vec<Solution<'a>>, // Valid solution collection
-    pub under_range: usize,           // Number of programs with answer below valid range
-    pub above_range: usize,           // Number of programs with answer above valid range
-    pub zero: usize,                  // Number of programs with zero intermediate result
-    pub negative: usize,              // Number of programs with negative intermediate result
-    pub div_zero: usize,              // Number of programs encountering division by zero
-    pub non_integer: usize,           // Number of programs with non-integer intermediate result
-    pub mult_by_1: usize,             // Number of programs containing a multipy by 1
-    pub div_by_1: usize,              // Number of programs containing a divide by 1
+    /// Valid solution collection
+    pub solutions: Vec<Solution<'a>>, 
+    /// Number of programs with answer below valid range
+    pub under_range: usize,           
+    /// Number of programs with answer above valid range
+    pub above_range: usize,           
+    /// Number of programs with zero intermediate result
+    pub zero: usize,                  
+    /// Number of programs with negative intermediate result
+    pub negative: usize,              
+    /// Number of programs encountering division by zero
+    pub div_zero: usize,              
+    /// Number of programs with non-integer intermediate result
+    pub non_integer: usize,           
+    /// Number of programs containing a multipy by 1
+    pub mult_by_1: usize,             
+    /// Number of programs containing a divide by 1
+    pub div_by_1: usize,              
 }
 
 impl<'a> Results<'a> {
