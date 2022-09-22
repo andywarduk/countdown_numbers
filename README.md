@@ -21,7 +21,7 @@ The output looks like this:
 
 ![solve](https://user-images.githubusercontent.com/4271248/190327456-307aecb4-02f0-42f5-8f71-377bc96e52e8.png)
 
-The solutions are sorted by shortest number of steps to reach the target. Each solution shows the equation in [reverse Polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation), a single line equation and individual steps.
+The solutions are sorted by shortest number of steps to reach the target. For each solution the program can output the equation in [reverse Polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation) (-r), a simplified infix equation (-i), a full infix equation (-f) and individual steps (-s).
 
 An example with 3 solutions:
 
@@ -34,24 +34,38 @@ $ ./solve.sh -i 917 100 25 5 3 3 1
 (3 × ((3 × (100 + 5)) - 1)) - 25
 ```
 
+In the above output the first two solutions look identical but they actually differ in the order of operations. This can be seen by choosing to display the full infix equation with -f:
+
+```
+$ ./solve.sh -f 917 100 25 5 3 3 1
+...
+3 solutions found
+25 + ((3 × ((100 × 3) - 1)) - 5)
+(25 + (3 × ((100 × 3) - 1))) - 5
+(3 × ((3 × (100 + 5)) - 1)) - 25
+```
+
 An example with 1 solution:
 ```
-./solve.sh 192 100 75 50 25 10 10
+./solve.sh -r -i -f -s 192 100 75 50 25 10 10
 ...
 1 solution found
 == Solution 1 ==
 RPN: 100 25 10 × 10 - × 75 50 + /
 Equation: 100 × ((25 × 10) - 10) / (75 + 50)
+Full equation: (100 × ((25 × 10) - 10)) / (75 + 50)
 Steps:
   25 × 10 = 250
   250 - 10 = 240
   100 × 240 = 24000
   75 + 50 = 125
+  24000 / 125 = 192
 ```
  
 ## Statistical Analysis
 The `solve_all` binary will produce a file for each combination of cards possible containing details of all of the possible targets for the chosen cards.
 To run:
+
 ```
 cargo run --release --bin solve_all
 ```
@@ -59,10 +73,12 @@ Or use the convenience scripts:
 ```
 ./solve_all.sh
 ```
+
 The `stats` binary can then be run to post-process the output directory and produce overall statistics.
 ```
 cargo run --release --bin stats solutions-NC-100-75-50-25-10-10-9-9-8-8-7-7-6-6-5-5-4-4-3-3-2-2-1-1
 ```
+
 Output from this is included in the repostitory.
 
 ### Card Combinations

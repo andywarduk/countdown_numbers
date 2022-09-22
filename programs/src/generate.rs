@@ -1,12 +1,12 @@
 //! This module is responsible for generating all possible RPN programs for a game.
-//! 
+//!
 //! For a set of numbers 1, 2, 3, 4 there are a number of slots in the RPN program
 //! where operators can be inserted:
 //! 1 2 <slot 1> 3 <slot 2> 4 <slot 3>
 //! The number of slots and operators is always the number of numbers - 1.
-//! Each slot except the last may be empty. Each slot can only contain a maximum of the 
+//! Each slot except the last may be empty. Each slot can only contain a maximum of the
 //! number of stacked numbers preceding it - 1. The counts of operators in each slot in
-//! this example would be: 
+//! this example would be:
 //! [0, 0, 3], [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 1, 1]
 
 use std::cmp::min;
@@ -122,7 +122,6 @@ fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: usize, slots:
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,7 +135,7 @@ mod tests {
             vec![0, 1, 2],
             vec![0, 2, 1],
             vec![1, 0, 2],
-            vec![1, 1, 1]
+            vec![1, 1, 1],
         ];
 
         assert_eq!(expected, counts);

@@ -116,23 +116,23 @@ impl Programs {
 #[derive(Default)]
 pub struct Results<'a> {
     /// Valid solution collection
-    pub solutions: Vec<Solution<'a>>, 
+    pub solutions: Vec<Solution<'a>>,
     /// Number of programs with answer below valid range
-    pub under_range: usize,           
+    pub under_range: usize,
     /// Number of programs with answer above valid range
-    pub above_range: usize,           
+    pub above_range: usize,
     /// Number of programs with zero intermediate result
-    pub zero: usize,                  
+    pub zero: usize,
     /// Number of programs with negative intermediate result
-    pub negative: usize,              
+    pub negative: usize,
     /// Number of programs encountering division by zero
-    pub div_zero: usize,              
+    pub div_zero: usize,
     /// Number of programs with non-integer intermediate result
-    pub non_integer: usize,           
+    pub non_integer: usize,
     /// Number of programs containing a multipy by 1
-    pub mult_by_1: usize,             
+    pub mult_by_1: usize,
     /// Number of programs containing a divide by 1
-    pub div_by_1: usize,              
+    pub div_by_1: usize,
 }
 
 impl<'a> Results<'a> {

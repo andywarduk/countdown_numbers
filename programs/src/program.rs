@@ -150,7 +150,11 @@ impl Program {
 
                 let ans_str = ans.to_string();
 
-                let equals = if colour { "=".dimmed().to_string() } else { "=".to_string() };
+                let equals = if colour {
+                    "=".dimmed().to_string()
+                } else {
+                    "=".to_string()
+                };
 
                 steps.push(format!("{} {} {} {} {}", s2, op.colour(numbers, colour), s1, equals, ans_str));
 
@@ -165,6 +169,27 @@ impl Program {
     /// Converts the RPN program to operator type grouped infix equation
     pub fn infix(&self, numbers: &[u32], colour: bool) -> String {
         infix_group(self).colour(numbers, colour)
+    }
+
+    /// Converts the RPN program to full infix equation
+    pub fn infix_full(&self, numbers: &[u32], colour: bool) -> String {
+        let mut stack: Vec<String> = Vec::with_capacity(numbers.len());
+
+        let infix = self
+            .process(&mut stack,
+                |n| Some(ProgOp::Number(n as u8).colour(numbers, colour)),
+                |s2, op, s1| {
+                    Some(format!("({} {} {})", s2, op.colour(numbers, colour), s1))
+                }
+            )
+            .unwrap();
+
+        if infix.starts_with('(') {
+            // Strip outer brackets
+            infix[1..infix.len() - 1].to_string()
+        } else {
+            infix
+        }
     }
 
     /// Converts the RPN program to a string for a given set of numbers

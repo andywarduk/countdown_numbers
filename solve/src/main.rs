@@ -34,7 +34,7 @@ fn main() {
                         if !args.inc_duplicated && duplicated(s.program, &mut stack, &mut set) {
                             return false;
                         }
-                        
+
                         // Filter out identical equations (can happen when duplicate card is chosen)
                         let rpn = s.program.rpn(&args.cards, false);
 
@@ -47,41 +47,8 @@ fn main() {
                 // Sort solutions by shortest first
                 solutions.sort();
 
-                // Print all solutions
-                let num_outputs = args.output.bits().count_ones();
-                let headings = num_outputs > 1 || args.output.contains(Output::STEPS);
-
-                for (i, s) in solutions.iter().enumerate() {
-                    if headings {
-                        println!("== Solution {} ==", i + 1);
-                    }
-
-                    if args.output.contains(Output::RPN) {
-                        if num_outputs > 1 {
-                            print!("RPN: ");
-                        }
-                        println!("{}", s.program.rpn(&args.cards, true));
-                    }
-
-                    if args.output.contains(Output::INFIX) {
-                        if num_outputs > 1 {
-                            print!("Equation: ");
-                        }
-                        println!("{}", s.program.infix(&args.cards, true));
-                    }
-
-                    if args.output.contains(Output::STEPS) {
-                        if num_outputs > 1 {
-                            println!("Steps:");
-                        }
-                        for l in s.program.steps(&args.cards, true) {
-                            if num_outputs > 1 {
-                                print!("  ");
-                            }
-                            println!("{}", l);
-                        }
-                    }
-                }
+                // Output solutions
+                print_solutions(&args, &solutions);
             }
 
             0
@@ -96,12 +63,58 @@ fn main() {
     process::exit(exit_code)
 }
 
+fn print_solutions(args: &Args, solutions: &[Solution]) {
+    // Print all solutions
+    let num_outputs = args.output.bits().count_ones();
+    let headings = num_outputs > 1 || args.output.contains(Output::STEPS);
+
+    for (i, s) in solutions.iter().enumerate() {
+        if headings {
+            println!("== Solution {} ==", i + 1);
+        }
+
+        if args.output.contains(Output::RPN) {
+            if num_outputs > 1 {
+                print!("RPN: ");
+            }
+            println!("{}", s.program.rpn(&args.cards, true));
+        }
+
+        if args.output.contains(Output::INFIX) {
+            if num_outputs > 1 {
+                print!("Equation: ");
+            }
+            println!("{}", s.program.infix(&args.cards, true));
+        }
+
+        if args.output.contains(Output::FULLINFIX) {
+            if num_outputs > 1 {
+                print!("Full equation: ");
+            }
+            println!("{}", s.program.infix_full(&args.cards, true));
+        }
+
+        if args.output.contains(Output::STEPS) {
+            if num_outputs > 1 {
+                println!("Steps:");
+            }
+            for l in s.program.steps(&args.cards, true) {
+                if num_outputs > 1 {
+                    print!("  ");
+                }
+                println!("{}", l);
+            }
+        }
+    }
+}
+
 bitflags! {
     #[derive(Default)]
     struct Output: u8 {
         const INFIX = 0b00000001;
-        const RPN = 0b00000010;
-        const STEPS = 0b00000100;
+        const FULLINFIX = 0b00000010;
+        const RPN = 0b00000100;
+        const STEPS = 0b00001000;
     }
 }
 
@@ -117,11 +130,15 @@ fn parse_args() -> Result<Args, i32> {
     let mut inc_duplicated = false;
     let mut output: Output = Default::default();
 
-    let mut add_output = |o| {
+    let mut add_output = |o| -> Result<(), i32> {
         if output.contains(o) {
-            eprintln!("Only one of -i, -r and -s can be given")
+            eprintln!("Only one of -i, -f, -r and -s can be given");
+            Err(1)?;
         }
+
         output.insert(o);
+
+        Ok(())
     };
 
     // Get target value and any flags from arguments
@@ -135,13 +152,16 @@ fn parse_args() -> Result<Args, i32> {
                             inc_duplicated = true;
                         }
                         "i" | "-infix" => {
-                            add_output(Output::INFIX);
+                            add_output(Output::INFIX)?;
+                        }
+                        "f" | "-full-infix" => {
+                            add_output(Output::FULLINFIX)?;
                         }
                         "r" | "-rpn" => {
-                            add_output(Output::RPN);
+                            add_output(Output::RPN)?;
                         }
                         "s" | "-steps" => {
-                            add_output(Output::STEPS);
+                            add_output(Output::STEPS)?;
                         }
                         _ => {
                             eprintln!("Unrecognised switch '{}'", arg);
@@ -181,7 +201,7 @@ fn parse_args() -> Result<Args, i32> {
     }
 
     if output.is_empty() {
-        output = Output::all();
+        output = Output::INFIX | Output::STEPS;
     }
 
     Ok(Args {
@@ -196,7 +216,8 @@ fn usage() {
     println!("Usage: solve <flags> <target> <card> [<card> ...]");
     println!("Where flags are:");
     println!("  -d | --duplicated   Include duplicated equations");
-    println!("  -i | --infix        Output infix equations");
+    println!("  -i | --infix        Output simplified infix equations");
+    println!("  -f | --full-infix   Output full infix equations");
     println!("  -r | --rpn          Output reverse Polish notation");
     println!("  -s | --steps        Output steps");
 }
