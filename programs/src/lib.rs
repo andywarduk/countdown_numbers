@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
 
-//! This module 
+//! This module is responsible for holding and running a collection of RPN programs
 
 pub mod duplicates;
 pub mod generate;
@@ -13,8 +13,6 @@ use std::cmp::Ordering;
 use generate::*;
 use progop::*;
 use program::*;
-
-/// RPN programs
 
 /// Collection of RPN program to run for a set of numbers
 pub struct Programs {
