@@ -1,14 +1,21 @@
+//! This module contains the enum of valid operators in an RPN program
+
 use std::fmt;
 
 use colored::*;
 
-/// ProgOp enum - RPN program items and operators
+/// RPN program items and operators
 #[derive(Clone, Copy, Hash, Eq, PartialEq)]
 pub enum ProgOp {
+    /// A number
     Number(u8),
+    /// Addition operator
     OpAdd,
+    /// Subtraction operator
     OpSub,
+    /// Multiplication operator
     OpMul,
+    /// Division operator
     OpDiv,
 }
 

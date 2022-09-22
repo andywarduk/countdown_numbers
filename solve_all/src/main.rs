@@ -34,9 +34,9 @@ struct Args {
     #[clap(short = 's', long = "special", action)]
     special_cards: bool,
 
-    /// Include commutative equations
-    #[clap(short = 'c', long = "commutative", action)]
-    inc_commutative: bool,
+    /// Include duplicated equations
+    #[clap(short = 'd', long = "duplicated", action)]
+    inc_duplicated: bool,
 }
 
 fn main() {
@@ -55,7 +55,7 @@ fn main() {
         // Generate RPN equations
         print!("Generating programs...");
         io::stdout().flush().unwrap();
-        let programs = Programs::new(6, args.inc_commutative);
+        let programs = Programs::new(6, args.inc_duplicated);
         println!(" {} programs generated", programs.len());
 
         // Generate card combinations
@@ -131,7 +131,7 @@ fn create_out_dir(args: &mut Args, cards: &[u32]) -> bool {
 
     if args.out_dir.is_empty() {
         // Create default directory name
-        let comm_str = if args.inc_commutative { "C" } else { "NC" };
+        let comm_str = if args.inc_duplicated { "C" } else { "NC" };
         args.out_dir = format!("solutions-{}-{}", comm_str, cards.iter().map(|c| c.to_string()).join("-"))
     };
 
@@ -207,7 +207,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
         writeln!(&mut file, "divide by 1: {}", results.div_by_1).unwrap();
         writeln!(&mut file, "< 100: {}", results.under_range).unwrap();
         writeln!(&mut file, "> 999: {}", results.above_range).unwrap();
-        writeln!(&mut file, "commutative included: {}", if args.inc_commutative { "Yes" } else { "No" }).unwrap();
+        writeln!(&mut file, "duplicates included: {}", if args.inc_duplicated { "Yes" } else { "No" }).unwrap();
 
         if args.output_equations {
             // Write all equations to the equation output file

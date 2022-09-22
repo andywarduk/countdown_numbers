@@ -1,3 +1,5 @@
+//! This module contains the Program struct which represents a single RPN program
+
 use crate::infix::*;
 use crate::progop::*;
 

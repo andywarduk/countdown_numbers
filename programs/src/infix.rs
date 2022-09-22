@@ -1,11 +1,21 @@
+//! This module is responsible for converting an RPN program in to an infix expression.
+//! For a given RPN program a tree of elements is returned describing the grouping of
+//! operations.
+
 use crate::progop::*;
 use crate::program::*;
 
 /// Operator type simplification equation element
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum InfixGrpTypeElem {
+    /// A number
     Number(u8),
+    /// An expression containing an expression followed by an operator and another expression.
+    /// The two terms on either side should be bracketed if they are not numbers
     Term(Box<InfixGrpTypeElem>, ProgOp, Box<InfixGrpTypeElem>),
+    /// An expression containing a string of operators and expressions.
+    /// The operators are all either + and - or * and /.
+    /// The operator on the first element describes which overall operator the group has
     Group(Vec<(ProgOp, InfixGrpTypeElem)>),
 }
 
@@ -275,5 +285,4 @@ mod tests {
             "100 × ((25 × 10) - 5) / (75 + 50)",
             &[100, 75, 50, 25, 10, 5], Ok(196));
     }
-
 }

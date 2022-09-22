@@ -31,7 +31,7 @@ fn main() {
                     .into_iter()
                     .filter(|s| {
                         // Filter out duplicated solutions
-                        if !args.inc_commutative && duplicated(s.program, &mut stack, &mut set) {
+                        if !args.inc_duplicated && duplicated(s.program, &mut stack, &mut set) {
                             return false;
                         }
                         
@@ -108,13 +108,13 @@ bitflags! {
 struct Args {
     target: u32,
     cards: Vec<u32>,
-    inc_commutative: bool,
+    inc_duplicated: bool,
     output: Output,
 }
 
 fn parse_args() -> Result<Args, i32> {
     let mut arg_iter = env::args().skip(1);
-    let mut inc_commutative = false;
+    let mut inc_duplicated = false;
     let mut output: Output = Default::default();
 
     let mut add_output = |o| {
@@ -131,8 +131,8 @@ fn parse_args() -> Result<Args, i32> {
                 if let Some(switch) = arg.strip_prefix('-') {
                     // A command line switch
                     match switch {
-                        "c" | "-commutative" => {
-                            inc_commutative = true;
+                        "d" | "-duplicated" => {
+                            inc_duplicated = true;
                         }
                         "i" | "-infix" => {
                             add_output(Output::INFIX);
@@ -187,7 +187,7 @@ fn parse_args() -> Result<Args, i32> {
     Ok(Args {
         target,
         cards,
-        inc_commutative,
+        inc_duplicated,
         output,
     })
 }
@@ -195,8 +195,8 @@ fn parse_args() -> Result<Args, i32> {
 fn usage() {
     println!("Usage: solve <flags> <target> <card> [<card> ...]");
     println!("Where flags are:");
-    println!("  -c | --commutative   Include commutative equations");
-    println!("  -i | --infix         Output infix equations");
-    println!("  -r | --rpn           Output reverse Polish notation");
-    println!("  -s | --steps         Output steps");
+    println!("  -d | --duplicated   Include duplicated equations");
+    println!("  -i | --infix        Output infix equations");
+    println!("  -r | --rpn          Output reverse Polish notation");
+    println!("  -s | --steps        Output steps");
 }

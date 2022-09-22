@@ -1,3 +1,14 @@
+//! This module is responsible for generating all possible RPN programs for a game.
+//! 
+//! For a set of numbers 1, 2, 3, 4 there are a number of slots in the RPN program
+//! where operators can be inserted:
+//! 1 2 <slot 1> 3 <slot 2> 4 <slot 3>
+//! The number of slots and operators is always the number of numbers - 1.
+//! Each slot except the last may be empty. Each slot can only contain a maximum of the 
+//! number of stacked numbers preceding it - 1. The counts of operators in each slot in
+//! this example would be: 
+//! [0, 0, 3], [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 1, 1]
+
 use std::cmp::min;
 use std::collections::HashSet;
 
@@ -6,7 +17,9 @@ use itertools::Itertools;
 use crate::duplicates::*;
 use crate::*;
 
-pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>, inc_commutative: bool) {
+/// Generates RPN programs for the given total number of numbers, the number of numbers selected
+/// and operator counts and combinations
+pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>, inc_duplicated: bool) {
     let mut set = HashSet::with_capacity(1_000_000 * num_cnt);
     let mut stack = Vec::with_capacity(num_cnt);
 
@@ -38,8 +51,8 @@ pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usiz
                         }
                     }
 
-                    // Commutative check
-                    if inc_commutative || !duplicated(&program, &mut stack, &mut set) {
+                    // Duplicate check
+                    if inc_duplicated || !duplicated(&program, &mut stack, &mut set) {
                         programs.push(program);
                     }
                 }
@@ -50,6 +63,7 @@ pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usiz
 
 type OpCounts = Vec<Vec<usize>>;
 
+/// Generates a vector of vectors containing the combinations of number of operators in each slot in the RPN program
 pub fn op_counts(nums: usize) -> OpCounts {
     let mut results = Vec::new();
 
@@ -80,6 +94,7 @@ fn op_counts_rec(results: &mut OpCounts, mut current: Vec<usize>, slot: usize, s
 
 type OpCombs = Vec<Vec<ProgOp>>;
 
+/// Generates a vector of vectors containing the combinations of operators to use in the RPN programs
 pub fn op_combs(nums: usize, operators: &Vec<ProgOp>) -> OpCombs {
     let mut results = Vec::new();
 
@@ -104,5 +119,40 @@ fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: usize, slots:
 
     for op in operators.iter() {
         add(*op);
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_op_counts() {
+        let counts = op_counts(4);
+
+        let expected: Vec<Vec<usize>> = vec![
+            vec![0, 0, 3],
+            vec![0, 1, 2],
+            vec![0, 2, 1],
+            vec![1, 0, 2],
+            vec![1, 1, 1]
+        ];
+
+        assert_eq!(expected, counts);
+    }
+
+    #[test]
+    fn test_op_combs() {
+        let combs = op_combs(3, &vec![ProgOp::OpAdd, ProgOp::OpSub]);
+
+        let expected = vec![
+            vec![ProgOp::OpAdd, ProgOp::OpAdd],
+            vec![ProgOp::OpAdd, ProgOp::OpSub],
+            vec![ProgOp::OpSub, ProgOp::OpAdd],
+            vec![ProgOp::OpSub, ProgOp::OpSub],
+        ];
+
+        assert_eq!(expected, combs);
     }
 }

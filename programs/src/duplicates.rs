@@ -1,3 +1,16 @@
+//! This module is responsible for detecting if an RPN program would be duplicated by another RPN program
+//! if the order of operations is changed. It does this by converting the RPN to bracketed infix and
+//! for each bracket group applying the following rules:
+//!  * The order of operators must go from + to - or * to /
+//!  * The order of terms for commutative operators must be numbers in ascending order followed by sub-terms
+//! 
+//! The infix expression is not sufficient to determine if a program is unique.
+//! For example the RPN program 0 3 4 * 5 - 1 2 + / * produces the infix 100 × ((25 × 10) - 5) / (75 + 50)
+//! when the numbers 100, 75, 50, 25, 10, 5 are applied.
+//! The program 0 3 4 * 5 - 1 2 + / * produces identical infix and result but the program execution behaves
+//! differently. The first program produces a NonInteger error because the ((25 × 10) - 5) / (75 + 50)
+//! term is evaluated first (1.96).
+
 use std::collections::HashSet;
 
 use crate::infix::*;
