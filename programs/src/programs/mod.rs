@@ -5,7 +5,7 @@ mod generate;
 
 use std::cmp::max;
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ops::Index;
 
 use colored::Colorize;
@@ -19,9 +19,9 @@ use generate::*;
 /// Holds instruction element numbers for each program
 pub struct ProgInstr {
     /// Start element of the instructions vector
-    pub start: usize,
+    pub start: u32,
     /// End element of the instructions vector
-    pub end: usize,
+    pub end: u32,
 }
 
 /// Collection of RPN program to run for a set of numbers
@@ -34,37 +34,50 @@ pub struct Programs {
 impl Programs {
     /// Create a new Programs struct
     pub fn new(nums: u8, inc_duplicated: bool) -> Self {
-        let operators = vec![ProgOp::OpAdd, ProgOp::OpSub, ProgOp::OpMul, ProgOp::OpDiv];
+        let operators = vec![
+            ProgOp::PROG_OP_ADD,
+            ProgOp::PROG_OP_SUB,
+            ProgOp::PROG_OP_MUL,
+            ProgOp::PROG_OP_DIV
+        ];
 
         Self::new_with_operators(nums, inc_duplicated, operators)
     }
 
     /// Create a new Programs struct with a given set of valid operators
     pub fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>) -> Self {
+        // Calculate number permutations
+        let num_perms: Vec<_> = (0..nums).permutations(nums as usize).collect();
+
+        // Calculate operator counts and combintions
+        let mut op_map = HashMap::with_capacity(nums as usize);
+
+        for num_cnt in 1..=nums {
+            assert!(op_map
+                .insert(num_cnt, (op_counts(num_cnt), op_combs(num_cnt, &operators)))
+                .is_none());
+        }
+
         // Create a vector to store the programs
-        let prog_cnt = calc_num_programs(nums, inc_duplicated, &operators);
+        let prog_cnt = calc_num_programs(nums, inc_duplicated, &num_perms, &op_map);
         let mut program_vec = Vec::with_capacity(prog_cnt);
+
+        // Create a vector to store program instructions
         let mut instruction_vec = Vec::with_capacity(prog_cnt * (nums as usize + (nums as usize - 1)));
 
         for num_cnt in 1..=nums {
-            // Generate operator counts
-            let op_count = op_counts(num_cnt);
-
-            // Generate operator combintions
-            let op_comb = op_combs(num_cnt, &operators);
-
             // Generate programs
             generate_num_programs(
                 &mut program_vec,
                 &mut instruction_vec,
-                nums,
                 num_cnt,
-                &op_count,
-                &op_comb,
+                &num_perms,
+                &op_map,
                 inc_duplicated,
             );
         }
 
+        // Shrink vectors
         program_vec.shrink_to_fit();
         instruction_vec.shrink_to_fit();
 
@@ -153,7 +166,7 @@ impl Programs {
 
     #[inline]
     fn instructions_for_program(&self, program: &ProgInstr) -> &[ProgOp] {
-        &self.instructions[program.start..=program.end]
+        &self.instructions[program.start as usize..=program.end as usize]
     }
 
     /// Returns the formatted steps of a program for a given set of numbers
@@ -164,13 +177,13 @@ impl Programs {
         process_instructions(
             self.instructions(prog_elem),
             &mut stack,
-            |n| Some((numbers[n as usize], ProgOp::Number(n).colour(numbers, colour))),
+            |n| Some((numbers[n as usize], ProgOp::new_number(n).colour(numbers, colour))),
             |(n2, s2), op, (n1, s1)| {
-                let ans = match op {
-                    ProgOp::OpAdd => n2 + n1,
-                    ProgOp::OpSub => n2 - n1,
-                    ProgOp::OpMul => n2 * n1,
-                    ProgOp::OpDiv => n2 / n1,
+                let ans = match op & ProgOp::PROG_OP_MASK {
+                    ProgOp::PROG_OP_ADD => n2 + n1,
+                    ProgOp::PROG_OP_SUB => n2 - n1,
+                    ProgOp::PROG_OP_MUL => n2 * n1,
+                    ProgOp::PROG_OP_DIV => n2 / n1,
                     _ => panic!("Non-operator not expected"),
                 };
 
@@ -204,7 +217,7 @@ impl Programs {
         let infix = process_instructions(
             self.instructions(prog_elem),
             &mut stack,
-            |n| Some(ProgOp::Number(n as u8).colour(numbers, colour)),
+            |n| Some(ProgOp::new_number(n).colour(numbers, colour)),
             |s2, op, s1| Some(format!("({} {} {})", s2, op.colour(numbers, colour), s1)),
         )
         .unwrap();
@@ -238,29 +251,31 @@ impl Programs {
 
 impl From<&str> for Programs {
     fn from(rpn: &str) -> Self {
+        // Convert string to instructions vector
         let instructions: Vec<ProgOp> = rpn
             .chars()
             .filter_map(|c| match c {
-                '0'..='9' => Some(ProgOp::Number(c as u8 - b'0')),
-                'a'..='z' => Some(ProgOp::Number(c as u8 - b'a')),
-                'A'..='Z' => Some(ProgOp::Number(c as u8 - b'A')),
-                '+' => Some(ProgOp::OpAdd),
-                '-' => Some(ProgOp::OpSub),
-                '*' => Some(ProgOp::OpMul),
-                '/' => Some(ProgOp::OpDiv),
+                '0'..='9' => Some(ProgOp::new_number(c as u8 - b'0')),
+                'a'..='z' => Some(ProgOp::new_number(c as u8 - b'a')),
+                'A'..='Z' => Some(ProgOp::new_number(c as u8 - b'A')),
+                '+' => Some(ProgOp::PROG_OP_ADD),
+                '-' => Some(ProgOp::PROG_OP_SUB),
+                '*' => Some(ProgOp::PROG_OP_MUL),
+                '/' => Some(ProgOp::PROG_OP_DIV),
                 _ => None,
             })
             .collect();
 
+        // Add instruction pointers
         let programs = vec![ProgInstr {
             start: 0,
-            end: instructions.len() - 1,
+            end: (instructions.len() - 1) as u32,
         }];
 
-        let nums = instructions.iter().fold(0, |max_n, i| match i {
-            ProgOp::Number(n) => max(max_n, *n),
-            _ => max_n,
-        });
+        // Work out the maximum number present in the program
+        let nums = instructions
+            .iter()
+            .fold(0, |max_n, i| if i.is_number() { max(max_n, i.bits()) } else { max_n });
 
         Programs {
             programs,

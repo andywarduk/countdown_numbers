@@ -12,27 +12,31 @@
 use std::cmp::min;
 use std::collections::HashSet;
 
-use itertools::Itertools;
-
 use crate::progop::*;
 use crate::programs::*;
 
 /// Calculates the number of programs that will be generated for a given number of numbers.
 /// When duplicates are filtered out an estimate is returned
-pub fn calc_num_programs(nums: u8, inc_duplicated: bool, operators: &Vec<ProgOp>) -> usize {
+pub fn calc_num_programs(
+    nums: u8,
+    inc_duplicated: bool,
+    num_perms: &Vec<Vec<u8>>,
+    op_map: &HashMap<u8, (OpCounts, OpCombs)>,
+) -> usize {
     let mut total = 0;
 
     for num_cnt in 1..=nums {
-        let perms = (0..nums).permutations(num_cnt as usize).count();
-
-        if num_cnt == 1 {
-            total += perms;
+        let mult = if num_cnt == 1 {
+            // No operators
+            1
         } else {
-            let op_count = op_counts(num_cnt).len();
-            let op_comb = op_combs(num_cnt, operators).len();
+            // Get operator counts and combinations
+            let (op_count, op_comb) = op_map.get(&num_cnt).unwrap();
 
-            total += perms * op_count * op_comb;
-        }
+            op_count.len() * op_comb.len()
+        };
+
+        total += num_perms.len() * mult;
     }
 
     if !inc_duplicated {
@@ -48,10 +52,9 @@ pub fn calc_num_programs(nums: u8, inc_duplicated: bool, operators: &Vec<ProgOp>
 pub fn generate_num_programs(
     programs: &mut Vec<ProgInstr>,
     instructions: &mut Vec<ProgOp>,
-    nums: u8,
     num_cnt: u8,
-    op_counts: &OpCounts,
-    op_combs: &Vec<Vec<ProgOp>>,
+    num_perms: &Vec<Vec<u8>>,
+    op_map: &HashMap<u8, (OpCounts, OpCombs)>,
     inc_duplicated: bool,
 ) {
     let mut stack = Vec::with_capacity(num_cnt as usize);
@@ -63,30 +66,33 @@ pub fn generate_num_programs(
         HashSet::with_capacity(programs.capacity())
     };
 
-    for nums in (0..nums).permutations(num_cnt as usize) {
+    // Get operator counts and combinations
+    let (op_count, op_comb) = op_map.get(&num_cnt).unwrap();
+
+    for nums in num_perms {
         if num_cnt == 1 {
             let inst_start = instructions.len();
 
             // Push the number
-            instructions.push(ProgOp::Number(nums[0] as u8));
+            instructions.push(ProgOp::new_number(nums[0]));
 
             // Add the program
             programs.push(ProgInstr {
-                start: inst_start,
-                end: instructions.len() - 1,
+                start: inst_start as u32,
+                end: (instructions.len() - 1) as u32,
             });
         } else {
-            for op_count in op_counts {
-                for op_comb in op_combs {
+            for op_count in op_count {
+                for op_comb in op_comb {
                     let inst_start = instructions.len();
                     let mut op_index = 0;
 
                     // Push first number
-                    instructions.push(ProgOp::Number(nums[0] as u8));
+                    instructions.push(ProgOp::new_number(nums[0]));
 
                     for i in 0..(num_cnt - 1) {
                         // Push number
-                        instructions.push(ProgOp::Number(nums[i as usize + 1] as u8));
+                        instructions.push(ProgOp::new_number(nums[i as usize + 1]));
 
                         // Push operators
                         for _ in 0..op_count[i as usize] {
@@ -97,8 +103,8 @@ pub fn generate_num_programs(
 
                     let inst_end = instructions.len() - 1;
                     let program = ProgInstr {
-                        start: inst_start,
-                        end: inst_end,
+                        start: inst_start as u32,
+                        end: inst_end as u32,
                     };
 
                     // Duplicate check
@@ -117,7 +123,19 @@ type OpCounts = Vec<Vec<u8>>;
 
 /// Generates a vector of vectors containing the combinations of number of operators in each slot in the RPN program
 pub fn op_counts(nums: u8) -> OpCounts {
-    let mut results = Vec::new();
+    let factorial = |num: usize| -> usize {
+        match num {
+            0 => 1,
+            _ => (1..=num).product(),
+        }
+    };
+
+    let catalan_number = |n: usize| -> usize {
+        factorial(2 * n) / (factorial(n + 1) * factorial(n))
+    };
+
+    let size = catalan_number(nums as usize - 1);
+    let mut results = Vec::with_capacity(size);
 
     if nums > 1 {
         op_counts_rec(
@@ -150,8 +168,10 @@ fn op_counts_rec(
         let max_stack = stacked - 1;
 
         for i in 0..=min(to_alloc - 1, max_stack) {
-            let mut next = current.clone();
+            let mut next = Vec::with_capacity(current.capacity());
+            next.clone_from(&current);
             next.push(i);
+
             let next_stacked = stacked + 1 - i;
             op_counts_rec(results, next, slot + 1, slots, to_alloc - i, next_stacked);
         }
@@ -162,7 +182,13 @@ type OpCombs = Vec<Vec<ProgOp>>;
 
 /// Generates a vector of vectors containing the combinations of operators to use in the RPN programs
 pub fn op_combs(nums: u8, operators: &Vec<ProgOp>) -> OpCombs {
-    let mut results = Vec::new();
+    let result_len = if nums > 1 {
+        operators.len().pow(nums as u32 - 1)
+    } else {
+        0
+    };
+
+    let mut results = Vec::with_capacity(result_len);
 
     if nums > 1 {
         op_combs_rec(
@@ -179,7 +205,9 @@ pub fn op_combs(nums: u8, operators: &Vec<ProgOp>) -> OpCombs {
 
 fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: u8, slots: u8, operators: &Vec<ProgOp>) {
     let mut add = |op: ProgOp| {
-        let mut next = current.clone();
+        let mut next = Vec::with_capacity(current.capacity());
+        next.clone_from(&current);
+
         next.push(op);
 
         if slot == slots - 1 {
@@ -215,13 +243,13 @@ mod tests {
 
     #[test]
     fn test_op_combs() {
-        let combs = op_combs(3, &vec![ProgOp::OpAdd, ProgOp::OpSub]);
+        let combs = op_combs(3, &vec![ProgOp::PROG_OP_ADD, ProgOp::PROG_OP_SUB]);
 
         let expected = vec![
-            vec![ProgOp::OpAdd, ProgOp::OpAdd],
-            vec![ProgOp::OpAdd, ProgOp::OpSub],
-            vec![ProgOp::OpSub, ProgOp::OpAdd],
-            vec![ProgOp::OpSub, ProgOp::OpSub],
+            vec![ProgOp::PROG_OP_ADD, ProgOp::PROG_OP_ADD],
+            vec![ProgOp::PROG_OP_ADD, ProgOp::PROG_OP_SUB],
+            vec![ProgOp::PROG_OP_SUB, ProgOp::PROG_OP_ADD],
+            vec![ProgOp::PROG_OP_SUB, ProgOp::PROG_OP_SUB],
         ];
 
         assert_eq!(expected, combs);

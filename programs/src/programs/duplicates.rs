@@ -29,14 +29,14 @@ pub fn duplicated(
 
         for (i, (op, e)) in grp.iter().enumerate() {
             if i > 0 {
-                match *op {
-                    ProgOp::OpAdd | ProgOp::OpMul => {
+                match *op & ProgOp::PROG_OP_MASK {
+                    ProgOp::PROG_OP_ADD | ProgOp::PROG_OP_MUL => {
                         if second_op {
                             // Got first operator after the second
                             return false;
                         }
                     }
-                    ProgOp::OpSub | ProgOp::OpDiv => {
+                    ProgOp::PROG_OP_SUB | ProgOp::PROG_OP_DIV => {
                         if !second_op {
                             second_op = true;
                             in_terms = false;
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn test4() {
-        let programs = Programs::new_with_operators(4, false, vec![ProgOp::OpAdd]);
+        let programs = Programs::new_with_operators(4, false, vec![ProgOp::PROG_OP_ADD]);
 
         let numbers = vec![0, 1, 2, 3];
 

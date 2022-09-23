@@ -199,6 +199,11 @@ fn parse_args() -> Result<Args, i32> {
         Err(1)?
     }
 
+    if cards.len() > 6 {
+        eprintln!("Maximum of 6 cards allowed");
+        Err(1)?
+    }
+
     if output.is_empty() {
         output = Output::INFIX | Output::STEPS;
     }

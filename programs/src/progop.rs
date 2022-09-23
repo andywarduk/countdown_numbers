@@ -1,55 +1,64 @@
 //! This module contains the enum of valid operators in an RPN program
 
-use std::fmt;
-
+use bitflags::bitflags;
 use colored::*;
 
-/// RPN program items and operators
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
-pub enum ProgOp {
-    /// A number
-    Number(u8),
-    /// Addition operator
-    OpAdd,
-    /// Subtraction operator
-    OpSub,
-    /// Multiplication operator
-    OpMul,
-    /// Division operator
-    OpDiv,
+bitflags! {
+    /// Program operator type bitmask. Top 3 bits are operator type, low 5 bits used for numbers (0-31)
+    pub struct ProgOp: u8 {
+        /// A number. The number is in the low 4 bits (0-15)
+        const PROG_OP_NUM = 0b00000000;
+        /// Addition operator
+        const PROG_OP_ADD = 0b00100000;
+        /// Subtraction operator
+        const PROG_OP_SUB = 0b01000000;
+        /// Multiplication operator
+        const PROG_OP_MUL = 0b01100000;
+        /// Division operator
+        const PROG_OP_DIV = 0b10000000;
+        /// Operator type mask
+        const PROG_OP_MASK = 0b11110000;
+    }
 }
 
 impl ProgOp {
+    /// Constructs a new number operator
+    #[inline]
+    pub fn new_number(n: u8) -> ProgOp {
+        let result = ProgOp { bits: n };
+
+        // Check we don't overflow 4 bits
+        debug_assert!(result & ProgOp::PROG_OP_MASK == ProgOp::PROG_OP_NUM);
+
+        result
+    }
+
+    /// Returns true if the operator is a number
+    #[inline]
+    pub fn is_number(&self) -> bool {
+        *self & ProgOp::PROG_OP_MASK == ProgOp::PROG_OP_NUM
+    }
+
     /// Returns the string representation of a program operator, optionally coloured
     pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
-        let mut res = match self {
-            ProgOp::Number(n) => numbers[*n as usize].to_string(),
-            ProgOp::OpAdd => "+".to_string(),
-            ProgOp::OpSub => "-".to_string(),
-            ProgOp::OpMul => "×".to_string(),
-            ProgOp::OpDiv => "/".to_string(),
+        let mut res = match *self & ProgOp::PROG_OP_MASK {
+            ProgOp::PROG_OP_NUM => numbers[self.bits as usize].to_string(),
+            ProgOp::PROG_OP_ADD => "+".to_string(),
+            ProgOp::PROG_OP_SUB => "-".to_string(),
+            ProgOp::PROG_OP_MUL => "×".to_string(),
+            ProgOp::PROG_OP_DIV => "/".to_string(),
+            _ => panic!("Unexpected operator type"),
         };
 
         if colour {
-            res = match self {
-                ProgOp::Number(_) => res.on_blue().to_string(),
-                ProgOp::OpAdd | ProgOp::OpSub | ProgOp::OpMul | ProgOp::OpDiv => res.dimmed().to_string(),
+            res = if self.is_number() {
+                res.on_blue().to_string()
+            } else {
+                res.dimmed().to_string()
             }
         }
 
         res
-    }
-}
-
-impl fmt::Debug for ProgOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Number(n) => write!(f, "{}", n),
-            Self::OpAdd => write!(f, "+"),
-            Self::OpSub => write!(f, "-"),
-            Self::OpMul => write!(f, "×"),
-            Self::OpDiv => write!(f, "/"),
-        }
     }
 }
 
@@ -68,13 +77,12 @@ where
     stack.clear();
 
     for op in instructions {
-        match op {
-            ProgOp::Number(n) => stack.push(num_cb(*n)?),
-            _ => {
-                let n1 = stack.pop().unwrap();
-                let n2 = stack.pop().unwrap();
-                stack.push(op_cb(n2, *op, n1)?)
-            }
+        if op.is_number() {
+            stack.push(num_cb(op.bits)?)
+        } else {
+            let n1 = stack.pop().unwrap();
+            let n2 = stack.pop().unwrap();
+            stack.push(op_cb(n2, *op, n1)?)
         }
     }
 
@@ -105,15 +113,15 @@ pub fn run_instructions(instructions: &[ProgOp], numbers: &[u32], stack: &mut Ve
     stack.clear();
 
     for op in instructions {
-        match op {
-            ProgOp::Number(x) => stack.push(numbers[*x as usize]),
-            ProgOp::OpAdd => {
+        match *op & ProgOp::PROG_OP_MASK {
+            ProgOp::PROG_OP_NUM => stack.push(numbers[op.bits as usize]),
+            ProgOp::PROG_OP_ADD => {
                 let n1 = stack.pop().unwrap();
                 let n2 = stack.pop().unwrap();
 
                 stack.push(n2 + n1);
             }
-            ProgOp::OpSub => {
+            ProgOp::PROG_OP_SUB => {
                 let n1 = stack.pop().unwrap();
                 let n2 = stack.pop().unwrap();
 
@@ -129,7 +137,7 @@ pub fn run_instructions(instructions: &[ProgOp], numbers: &[u32], stack: &mut Ve
 
                 stack.push(int);
             }
-            ProgOp::OpMul => {
+            ProgOp::PROG_OP_MUL => {
                 let n1 = stack.pop().unwrap();
                 let n2 = stack.pop().unwrap();
 
@@ -145,7 +153,7 @@ pub fn run_instructions(instructions: &[ProgOp], numbers: &[u32], stack: &mut Ve
 
                 stack.push(int);
             }
-            ProgOp::OpDiv => {
+            ProgOp::PROG_OP_DIV => {
                 let n1 = stack.pop().unwrap();
                 let n2 = stack.pop().unwrap();
 
@@ -163,6 +171,7 @@ pub fn run_instructions(instructions: &[ProgOp], numbers: &[u32], stack: &mut Ve
 
                 stack.push(n2 / n1);
             }
+            _ => panic!("Unexpected operator type"),
         }
     }
 
@@ -178,6 +187,6 @@ mod tests {
 
     #[test]
     fn test_size() {
-        assert_eq!(2, mem::size_of::<ProgOp>());
+        assert_eq!(1, mem::size_of::<ProgOp>());
     }
 }

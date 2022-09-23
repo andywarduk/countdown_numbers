@@ -31,7 +31,7 @@ impl InfixGrpTypeElem {
             InfixGrpTypeElem::Number(n) => {
                 no_brackets = true;
 
-                ProgOp::Number(*n).colour(numbers, colour)
+                ProgOp::new_number(*n).colour(numbers, colour)
             }
             InfixGrpTypeElem::Term(t1, op, t2) => {
                 format!("{} {} {}",
@@ -40,20 +40,19 @@ impl InfixGrpTypeElem {
                     t2.colour_internal(numbers, colour, true),
                 )
             }
-            InfixGrpTypeElem::Group(terms) => {
-                terms.iter()
-                    .enumerate()
-                    .map(|(i, (op, elem))| {
-                        let elem_str = elem.colour_internal(numbers, colour, true);
+            InfixGrpTypeElem::Group(terms) => terms
+                .iter()
+                .enumerate()
+                .map(|(i, (op, elem))| {
+                    let elem_str = elem.colour_internal(numbers, colour, true);
 
-                        if i == 0 {
-                            elem_str
-                        } else {
-                            format!(" {} {}", op.colour(numbers, colour), elem_str)
-                        }
-                    })
-                    .collect()
-            }
+                    if i == 0 {
+                        elem_str
+                    } else {
+                        format!(" {} {}", op.colour(numbers, colour), elem_str)
+                    }
+                })
+                .collect(),
         };
 
         if brackets && !no_brackets {
@@ -90,8 +89,10 @@ where
 {
     stack.clear();
 
+    let inst_cnt = instructions.len();
+
     let build_grp = |other_op, t1, op, t2, inc_right, grp_cb: &mut F| -> Option<InfixGrpTypeElem> {
-        let mut grp = Vec::with_capacity(8);
+        let mut grp = Vec::with_capacity(inst_cnt);
 
         match t1 {
             InfixGrpTypeElem::Group(mut t1_terms)
@@ -167,11 +168,11 @@ where
         instructions,
         stack,
         |n| Some(InfixGrpTypeElem::Number(n)),
-        |t1, op, t2| match op {
-            ProgOp::OpAdd => build_grp(ProgOp::OpSub, t1, op, t2, true, grp_cb),
-            ProgOp::OpMul => build_grp(ProgOp::OpDiv, t1, op, t2, true, grp_cb),
-            ProgOp::OpSub => build_grp(ProgOp::OpAdd, t1, op, t2, false, grp_cb),
-            ProgOp::OpDiv => build_grp(ProgOp::OpMul, t1, op, t2, false, grp_cb),
+        |t1, op, t2| match op & ProgOp::PROG_OP_MASK {
+            ProgOp::PROG_OP_ADD => build_grp(ProgOp::PROG_OP_SUB, t1, op, t2, true, grp_cb),
+            ProgOp::PROG_OP_MUL => build_grp(ProgOp::PROG_OP_DIV, t1, op, t2, true, grp_cb),
+            ProgOp::PROG_OP_SUB => build_grp(ProgOp::PROG_OP_ADD, t1, op, t2, false, grp_cb),
+            ProgOp::PROG_OP_DIV => build_grp(ProgOp::PROG_OP_MUL, t1, op, t2, false, grp_cb),
             _ => build_term(t1, op, t2, grp_cb),
         },
     )?;
@@ -198,7 +199,7 @@ mod tests {
         let num_count = programs
             .instructions(0)
             .iter()
-            .filter(|i| matches!(i, ProgOp::Number(_)))
+            .filter(|i| i.is_number())
             .count();
 
         let numbers: Vec<u32> = (0..num_count).map(|i| i as u32).collect();
