@@ -11,7 +11,7 @@ use clap::Parser;
 use itertools::Itertools;
 
 use cards::*;
-use programs::*;
+use programs::programs::*;
 
 // Structure to hold parsed command line arguments
 

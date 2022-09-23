@@ -5,7 +5,7 @@ use std::process;
 use bitflags::bitflags;
 
 use programs::duplicates::*;
-use programs::*;
+use programs::programs::*;
 
 fn main() {
     // Parse command line arguments

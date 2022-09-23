@@ -82,7 +82,11 @@ where
 }
 
 /// Returns an operator type simplified equation tree for a program
-pub fn infix_group_cb_stack<F>(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, grp_cb: &mut F) -> Option<InfixGrpTypeElem>
+pub fn infix_group_cb_stack<F>(
+    program: &Program,
+    stack: &mut Vec<InfixGrpTypeElem>,
+    grp_cb: &mut F,
+) -> Option<InfixGrpTypeElem>
 where
     F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool,
 {
@@ -188,10 +192,7 @@ mod tests {
         let num_count = program
             .instructions()
             .iter()
-            .filter(|i| match i {
-                ProgOp::Number(_) => true,
-                _ => false,
-            })
+            .filter(|i| matches!(i, ProgOp::Number(_)))
             .count();
 
         let numbers: Vec<u32> = (0..num_count).map(|i| i as u32).collect();
@@ -212,7 +213,7 @@ mod tests {
     }
 
     fn test_program_infix(program: &Program, exp_infix: &str, numbers: &[u32]) {
-        let infix = infix_group(&program);
+        let infix = infix_group(program);
 
         println!("RPN: {}, infix: {}",
             program.rpn(numbers, false), infix.colour(numbers, false));

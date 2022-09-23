@@ -52,3 +52,16 @@ impl fmt::Debug for ProgOp {
         }
     }
 }
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem;
+
+    #[test]
+    fn test_size() {
+        assert_eq!(2, mem::size_of::<ProgOp>());
+    }
+}

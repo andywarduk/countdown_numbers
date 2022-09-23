@@ -15,13 +15,53 @@ use std::collections::HashSet;
 use itertools::Itertools;
 
 use crate::duplicates::*;
-use crate::*;
+use crate::progop::*;
+use crate::program::*;
+
+/// Calculates the number of programs that will be generated for a given number of numbers.
+/// When duplicates are filtered out an estimate is returned
+pub fn calc_num_programs(nums: usize, inc_duplicated: bool, operators: &Vec<ProgOp>) -> usize {
+    let mut total = 0;
+
+    for num_cnt in 1..=nums {
+        let perms = (0..nums).permutations(num_cnt).count();
+
+        if num_cnt == 1 {
+            total += perms;
+        } else {
+            let op_count = op_counts(num_cnt).len();
+            let op_comb = op_combs(num_cnt, operators).len();
+
+            total += perms * op_count * op_comb;
+        }
+    }
+
+    if !inc_duplicated {
+        // Guess about 1/7 of programs left behind after duplicate filtering
+        total /= 7;
+    }
+
+    total
+}
 
 /// Generates RPN programs for the given total number of numbers, the number of numbers selected
 /// and operator counts and combinations
-pub fn generate_num_programs(programs: &mut Programs, nums: usize, num_cnt: usize, op_counts: &OpCounts, op_combs: &Vec<Vec<ProgOp>>, inc_duplicated: bool) {
-    let mut set = HashSet::with_capacity(1_000_000 * num_cnt);
+pub fn generate_num_programs(
+    programs: &mut Vec<Program>,
+    nums: usize,
+    num_cnt: usize,
+    op_counts: &OpCounts,
+    op_combs: &Vec<Vec<ProgOp>>,
+    inc_duplicated: bool,
+) {
     let mut stack = Vec::with_capacity(num_cnt);
+
+    let mut set = if inc_duplicated {
+        // Not used when duplicates are included
+        HashSet::new()
+    } else {
+        HashSet::with_capacity(programs.capacity())
+    };
 
     for nums in (0..nums).permutations(num_cnt) {
         if num_cnt == 1 {
@@ -74,7 +114,14 @@ pub fn op_counts(nums: usize) -> OpCounts {
     results
 }
 
-fn op_counts_rec(results: &mut OpCounts, mut current: Vec<usize>, slot: usize, slots: usize, to_alloc: usize, stacked: usize) {
+fn op_counts_rec(
+    results: &mut OpCounts,
+    mut current: Vec<usize>,
+    slot: usize,
+    slots: usize,
+    to_alloc: usize,
+    stacked: usize,
+) {
     if slot == slots - 1 {
         // Allocate all to the last slot
         current.push(to_alloc);

@@ -67,7 +67,7 @@ pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::*;
+    use crate::programs::*;
     use itertools::Itertools;
 
     fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: bool) {
@@ -81,7 +81,7 @@ mod tests {
         let mut groups = Vec::new();
 
         infix_group_cb(&program, &mut |grp| {
-            groups.push(format!("{}", InfixGrpTypeElem::Group(grp.clone()).colour(&elems, false)));
+            groups.push(InfixGrpTypeElem::Group(grp.clone()).colour(&elems, false));
             true
         })
         .unwrap();
@@ -218,13 +218,13 @@ mod tests {
             "0 + 1 + 2 + 3",
         ];
 
-        for prog in &programs.programs {
+        for prog in programs.programs() {
             println!("Equation: {}", prog.infix(&numbers, true));
         }
 
         assert_eq!(expected.len(), programs.len());
 
-        for (exp, prog) in expected.iter().zip(programs.programs.iter()) {
+        for (exp, prog) in expected.iter().zip(programs.programs().iter()) {
             assert_eq!(*exp, prog.infix(&numbers, false))
         }
     }
