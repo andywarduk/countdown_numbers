@@ -24,25 +24,24 @@ impl InfixGrpTypeElem {
         self.colour_internal(numbers, colour, false)
     }
 
-    fn colour_internal(&self, numbers: &[u32], colour: bool, bracket: bool) -> String {
-        match self {
-            InfixGrpTypeElem::Number(n) => ProgOp::Number(*n).colour(numbers, colour),
+    fn colour_internal(&self, numbers: &[u32], colour: bool, brackets: bool) -> String {
+        let mut no_brackets = false;
+
+        let inner = match self {
+            InfixGrpTypeElem::Number(n) => {
+                no_brackets = true;
+
+                ProgOp::Number(*n).colour(numbers, colour)
+            }
             InfixGrpTypeElem::Term(t1, op, t2) => {
-                let inner = format!("{} {} {}",
+                format!("{} {} {}",
                     t1.colour_internal(numbers, colour, true),
                     op.colour(numbers, colour),
                     t2.colour_internal(numbers, colour, true),
-                );
-
-                if bracket {
-                    format!("({})", inner)
-                } else {
-                    inner
-                }
+                )
             }
             InfixGrpTypeElem::Group(terms) => {
-                let inner = terms
-                    .iter()
+                terms.iter()
                     .enumerate()
                     .map(|(i, (op, elem))| {
                         let elem_str = elem.colour_internal(numbers, colour, true);
@@ -53,14 +52,14 @@ impl InfixGrpTypeElem {
                             format!(" {} {}", op.colour(numbers, colour), elem_str)
                         }
                     })
-                    .collect();
-
-                if bracket {
-                    format!("({})", inner)
-                } else {
-                    inner
-                }
+                    .collect()
             }
+        };
+
+        if brackets && !no_brackets {
+            format!("({})", inner)
+        } else {
+            inner
         }
     }
 }
@@ -98,13 +97,16 @@ where
             InfixGrpTypeElem::Group(mut t1_terms)
                 if t1_terms[0].0 == op || t1_terms[0].0 == other_op =>
             {
+                // Group with compatible operator (ie + and - or * and /)
                 t1_terms[0].0 = op;
                 grp.append(&mut t1_terms);
             }
             InfixGrpTypeElem::Group(ref t1_terms) => {
+                // Group with incompatible operators
                 if !grp_cb(t1_terms) {
                     None?
                 }
+
                 grp.push((op, t1))
             }
             _ => grp.push((op, t1)),
@@ -115,10 +117,12 @@ where
                 InfixGrpTypeElem::Group(mut t2_terms)
                     if t2_terms[0].0 == other_op || t2_terms[0].0 == op =>
                 {
+                    // Group with compatible operator (ie + and - or * and /)
                     t2_terms[0].0 = op;
                     grp.append(&mut t2_terms)
                 }
                 InfixGrpTypeElem::Group(ref t2_terms) => {
+                    // Group with incompatible operators
                     if !grp_cb(t2_terms) {
                         None?
                     }
