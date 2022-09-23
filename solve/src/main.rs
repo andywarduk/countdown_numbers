@@ -4,7 +4,6 @@ use std::process;
 
 use bitflags::bitflags;
 
-use programs::duplicates::*;
 use programs::programs::*;
 
 fn main() {
@@ -15,10 +14,10 @@ fn main() {
             println!("Target {}, Cards {:?}", args.target, args.cards);
 
             println!("Generating programs...");
-            let programs = Programs::new(args.cards.len(), true);
+            let programs = Programs::new(args.cards.len() as u8, true);
 
             println!("Running {} programs...", programs.len());
-            let mut solutions = programs.run_target(args.target, &args.cards);
+            let mut solutions = programs.run_all_target(args.target, &args.cards);
 
             if solutions.is_empty() {
                 println!("== No solutions ==");
@@ -31,12 +30,12 @@ fn main() {
                     .into_iter()
                     .filter(|s| {
                         // Filter out duplicated solutions
-                        if !args.inc_duplicated && duplicated(s.program, &mut stack, &mut set) {
+                        if !args.inc_duplicated && programs.duplicated(s.program, &mut stack, &mut set) {
                             return false;
                         }
 
                         // Filter out identical equations (can happen when duplicate card is chosen)
-                        let rpn = s.program.rpn(&args.cards, false);
+                        let rpn = programs.rpn(s.program, &args.cards, false);
 
                         rpn_set.insert(rpn)
                     })
@@ -48,7 +47,7 @@ fn main() {
                 solutions.sort();
 
                 // Output solutions
-                print_solutions(&args, &solutions);
+                print_solutions(&args, &programs, &solutions);
             }
 
             0
@@ -63,7 +62,7 @@ fn main() {
     process::exit(exit_code)
 }
 
-fn print_solutions(args: &Args, solutions: &[Solution]) {
+fn print_solutions(args: &Args, programs: &Programs, solutions: &[Solution]) {
     // Print all solutions
     let num_outputs = args.output.bits().count_ones();
     let headings = num_outputs > 1 || args.output.contains(Output::STEPS);
@@ -77,28 +76,28 @@ fn print_solutions(args: &Args, solutions: &[Solution]) {
             if num_outputs > 1 {
                 print!("RPN: ");
             }
-            println!("{}", s.program.rpn(&args.cards, true));
+            println!("{}", programs.rpn(s.program, &args.cards, true));
         }
 
         if args.output.contains(Output::INFIX) {
             if num_outputs > 1 {
                 print!("Equation: ");
             }
-            println!("{}", s.program.infix(&args.cards, true));
+            println!("{}", programs.infix(s.program, &args.cards, true));
         }
 
         if args.output.contains(Output::FULLINFIX) {
             if num_outputs > 1 {
                 print!("Full equation: ");
             }
-            println!("{}", s.program.infix_full(&args.cards, true));
+            println!("{}", programs.infix_full(s.program, &args.cards, true));
         }
 
         if args.output.contains(Output::STEPS) {
             if num_outputs > 1 {
                 println!("Steps:");
             }
-            for l in s.program.steps(&args.cards, true) {
+            for l in programs.steps(s.program, &args.cards, true) {
                 if num_outputs > 1 {
                     print!("  ");
                 }

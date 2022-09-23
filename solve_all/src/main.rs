@@ -167,7 +167,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
         println!("Calculating {:?}...", numbers);
 
         // Run all of the programs for this set of numbers
-        let results = programs.run(numbers);
+        let results = programs.run_all(numbers);
 
         // Count the number of solutions for each target number
         let mut sol_cnt: [u32; 900] = [0; 900];
@@ -218,7 +218,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>) {
             let mut eqn_file = File::create(eqn_file_path).unwrap();
 
             for solution in results.solutions.iter().sorted() {
-                writeln!(&mut eqn_file, "{}", solution.program.infix(numbers, false)).unwrap();
+                writeln!(&mut eqn_file, "{}", programs.infix(solution.program, numbers, false)).unwrap();
             }
         }
     }

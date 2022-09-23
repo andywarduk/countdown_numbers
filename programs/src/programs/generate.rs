@@ -14,17 +14,16 @@ use std::collections::HashSet;
 
 use itertools::Itertools;
 
-use crate::duplicates::*;
 use crate::progop::*;
-use crate::program::*;
+use crate::programs::*;
 
 /// Calculates the number of programs that will be generated for a given number of numbers.
 /// When duplicates are filtered out an estimate is returned
-pub fn calc_num_programs(nums: usize, inc_duplicated: bool, operators: &Vec<ProgOp>) -> usize {
+pub fn calc_num_programs(nums: u8, inc_duplicated: bool, operators: &Vec<ProgOp>) -> usize {
     let mut total = 0;
 
     for num_cnt in 1..=nums {
-        let perms = (0..nums).permutations(num_cnt).count();
+        let perms = (0..nums).permutations(num_cnt as usize).count();
 
         if num_cnt == 1 {
             total += perms;
@@ -47,14 +46,15 @@ pub fn calc_num_programs(nums: usize, inc_duplicated: bool, operators: &Vec<Prog
 /// Generates RPN programs for the given total number of numbers, the number of numbers selected
 /// and operator counts and combinations
 pub fn generate_num_programs(
-    programs: &mut Vec<Program>,
-    nums: usize,
-    num_cnt: usize,
+    programs: &mut Vec<ProgInstr>,
+    instructions: &mut Vec<ProgOp>,
+    nums: u8,
+    num_cnt: u8,
     op_counts: &OpCounts,
     op_combs: &Vec<Vec<ProgOp>>,
     inc_duplicated: bool,
 ) {
-    let mut stack = Vec::with_capacity(num_cnt);
+    let mut stack = Vec::with_capacity(num_cnt as usize);
 
     let mut set = if inc_duplicated {
         // Not used when duplicates are included
@@ -63,37 +63,49 @@ pub fn generate_num_programs(
         HashSet::with_capacity(programs.capacity())
     };
 
-    for nums in (0..nums).permutations(num_cnt) {
+    for nums in (0..nums).permutations(num_cnt as usize) {
         if num_cnt == 1 {
-            let mut program = Program::new(num_cnt);
+            let inst_start = instructions.len();
 
             // Push the number
-            program.push(ProgOp::Number(nums[0] as u8));
+            instructions.push(ProgOp::Number(nums[0] as u8));
 
-            programs.push(program);
+            // Add the program
+            programs.push(ProgInstr {
+                start: inst_start,
+                end: instructions.len() - 1,
+            });
         } else {
             for op_count in op_counts {
                 for op_comb in op_combs {
-                    let mut program = Program::new(num_cnt);
+                    let inst_start = instructions.len();
                     let mut op_index = 0;
 
                     // Push first number
-                    program.push(ProgOp::Number(nums[0] as u8));
+                    instructions.push(ProgOp::Number(nums[0] as u8));
 
                     for i in 0..(num_cnt - 1) {
                         // Push number
-                        program.push(ProgOp::Number(nums[i + 1] as u8));
+                        instructions.push(ProgOp::Number(nums[i as usize + 1] as u8));
 
                         // Push operators
-                        for _ in 0..op_count[i] {
-                            program.push(op_comb[op_index]);
+                        for _ in 0..op_count[i as usize] {
+                            instructions.push(op_comb[op_index]);
                             op_index += 1;
                         }
                     }
 
+                    let inst_end = instructions.len() - 1;
+                    let program = ProgInstr {
+                        start: inst_start,
+                        end: inst_end,
+                    };
+
                     // Duplicate check
-                    if inc_duplicated || !duplicated(&program, &mut stack, &mut set) {
+                    if inc_duplicated || !duplicated(&instructions[inst_start..=inst_end], &mut stack, &mut set) {
                         programs.push(program);
+                    } else {
+                        instructions.truncate(inst_start);
                     }
                 }
             }
@@ -101,14 +113,21 @@ pub fn generate_num_programs(
     }
 }
 
-type OpCounts = Vec<Vec<usize>>;
+type OpCounts = Vec<Vec<u8>>;
 
 /// Generates a vector of vectors containing the combinations of number of operators in each slot in the RPN program
-pub fn op_counts(nums: usize) -> OpCounts {
+pub fn op_counts(nums: u8) -> OpCounts {
     let mut results = Vec::new();
 
     if nums > 1 {
-        op_counts_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1, nums - 1, 2);
+        op_counts_rec(
+            &mut results,
+            Vec::with_capacity((nums - 1) as usize),
+            0,
+            nums - 1,
+            nums - 1,
+            2,
+        );
     }
 
     results
@@ -116,11 +135,11 @@ pub fn op_counts(nums: usize) -> OpCounts {
 
 fn op_counts_rec(
     results: &mut OpCounts,
-    mut current: Vec<usize>,
-    slot: usize,
-    slots: usize,
-    to_alloc: usize,
-    stacked: usize,
+    mut current: Vec<u8>,
+    slot: u8,
+    slots: u8,
+    to_alloc: u8,
+    stacked: u8,
 ) {
     if slot == slots - 1 {
         // Allocate all to the last slot
@@ -142,17 +161,23 @@ fn op_counts_rec(
 type OpCombs = Vec<Vec<ProgOp>>;
 
 /// Generates a vector of vectors containing the combinations of operators to use in the RPN programs
-pub fn op_combs(nums: usize, operators: &Vec<ProgOp>) -> OpCombs {
+pub fn op_combs(nums: u8, operators: &Vec<ProgOp>) -> OpCombs {
     let mut results = Vec::new();
 
     if nums > 1 {
-        op_combs_rec(&mut results, Vec::with_capacity(nums - 1), 0, nums - 1, operators);
+        op_combs_rec(
+            &mut results,
+            Vec::with_capacity((nums - 1) as usize),
+            0,
+            nums - 1,
+            operators,
+        );
     }
 
     results
 }
 
-fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: usize, slots: usize, operators: &Vec<ProgOp>) {
+fn op_combs_rec(results: &mut OpCombs, current: Vec<ProgOp>, slot: u8, slots: u8, operators: &Vec<ProgOp>) {
     let mut add = |op: ProgOp| {
         let mut next = current.clone();
         next.push(op);
@@ -177,7 +202,7 @@ mod tests {
     fn test_op_counts() {
         let counts = op_counts(4);
 
-        let expected: Vec<Vec<usize>> = vec![
+        let expected: Vec<Vec<u8>> = vec![
             vec![0, 0, 3],
             vec![0, 1, 2],
             vec![0, 2, 1],

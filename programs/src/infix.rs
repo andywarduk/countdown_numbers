@@ -3,7 +3,6 @@
 //! operations.
 
 use crate::progop::*;
-use crate::program::*;
 
 /// Operator type simplification equation element
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -67,23 +66,23 @@ impl InfixGrpTypeElem {
 }
 
 /// Returns the infix structure for the program
-pub fn infix_group(program: &Program) -> InfixGrpTypeElem {
-    infix_group_cb(program, &mut |_| true).unwrap()
+pub fn infix_group(instructions: &[ProgOp]) -> InfixGrpTypeElem {
+    infix_group_cb(instructions, &mut |_| true).unwrap()
 }
 
 /// Returns an operator type simplified equation tree for a program
-pub fn infix_group_cb<F>(program: &Program, grp_cb: &mut F) -> Option<InfixGrpTypeElem>
+pub fn infix_group_cb<F>(instructions: &[ProgOp], grp_cb: &mut F) -> Option<InfixGrpTypeElem>
 where
     F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool,
 {
     let mut stack = Vec::new();
 
-    infix_group_cb_stack(program, &mut stack, grp_cb)
+    infix_group_cb_stack(instructions, &mut stack, grp_cb)
 }
 
 /// Returns an operator type simplified equation tree for a program
 pub fn infix_group_cb_stack<F>(
-    program: &Program,
+    instructions: &[ProgOp],
     stack: &mut Vec<InfixGrpTypeElem>,
     grp_cb: &mut F,
 ) -> Option<InfixGrpTypeElem>
@@ -160,7 +159,9 @@ where
         Some(InfixGrpTypeElem::Term(Box::new(t1), op, Box::new(t2)))
     };
 
-    let outer_term = program.process(stack,
+    let outer_term = process_instructions(
+        instructions,
+        stack,
         |n| Some(InfixGrpTypeElem::Number(n)),
         |t1, op, t2| match op {
             ProgOp::OpAdd => build_grp(ProgOp::OpSub, t1, op, t2, true, grp_cb),
@@ -168,7 +169,7 @@ where
             ProgOp::OpSub => build_grp(ProgOp::OpAdd, t1, op, t2, false, grp_cb),
             ProgOp::OpDiv => build_grp(ProgOp::OpMul, t1, op, t2, false, grp_cb),
             _ => build_term(t1, op, t2, grp_cb),
-        }
+        },
     )?;
 
     if let InfixGrpTypeElem::Group(grp) = &outer_term {
@@ -185,38 +186,36 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::programs::*;
 
     fn test_rpn_infix(rpn: &str, exp_infix: &str) {
-        let program: Program = rpn.into();
+        let programs: Programs = rpn.into();
 
-        let num_count = program
-            .instructions()
+        let num_count = programs
+            .instructions(0)
             .iter()
             .filter(|i| matches!(i, ProgOp::Number(_)))
             .count();
 
         let numbers: Vec<u32> = (0..num_count).map(|i| i as u32).collect();
 
-        test_program_infix(&program, exp_infix, &numbers);
+        test_program_infix(&programs, exp_infix, &numbers);
     }
 
     fn test_rpn_infix_and_result(rpn: &str, exp_infix: &str, numbers: &[u32], exp_ans: Result<u32, ProgErr>) {
-        let program: Program = rpn.into();
+        let programs: Programs = rpn.into();
 
-        test_program_infix(&program, exp_infix, numbers);
+        test_program_infix(&programs, exp_infix, numbers);
 
-        let mut stack = Vec::new();
-
-        let ans = program.run(numbers, &mut stack);
+        let ans = programs.run(0, numbers);
 
         assert_eq!(exp_ans, ans);
     }
 
-    fn test_program_infix(program: &Program, exp_infix: &str, numbers: &[u32]) {
-        let infix = infix_group(program);
+    fn test_program_infix(programs: &Programs, exp_infix: &str, numbers: &[u32]) {
+        let infix = infix_group(programs.instructions(0));
 
-        println!("RPN: {}, infix: {}",
-            program.rpn(numbers, false), infix.colour(numbers, false));
+        println!("RPN: {}, infix: {}", programs.rpn(0, numbers, false), infix.colour(numbers, false));
 
         assert_eq!(exp_infix, infix.colour(numbers, false));
     }

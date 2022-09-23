@@ -15,11 +15,14 @@ use std::collections::HashSet;
 
 use crate::infix::*;
 use crate::progop::*;
-use crate::program::*;
 
 /// Returns true if the program would be duplicated by rearranging the terms of the equation
-pub fn duplicated(program: &Program, stack: &mut Vec<InfixGrpTypeElem>, set: &mut HashSet<InfixGrpTypeElem>) -> bool {
-    infix_group_cb_stack(program, stack, &mut |grp| {
+pub fn duplicated(
+    instructions: &[ProgOp],
+    stack: &mut Vec<InfixGrpTypeElem>,
+    set: &mut HashSet<InfixGrpTypeElem>,
+) -> bool {
+    infix_group_cb_stack(instructions, stack, &mut |grp| {
         let mut second_op = false;
         let mut in_terms = false;
         let mut last_num: u8 = 0;
@@ -72,7 +75,7 @@ mod tests {
 
     fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: bool) {
         // Create program
-        let program: Program = rpn.into();
+        let programs: Programs = rpn.into();
 
         // Create element vector
         let elems: Vec<u32> = (0..numbers.len()).map(|i| i as u32).collect();
@@ -80,21 +83,21 @@ mod tests {
         // Get infix groups
         let mut groups = Vec::new();
 
-        infix_group_cb(&program, &mut |grp| {
+        infix_group_cb(programs.instructions(0), &mut |grp| {
             groups.push(InfixGrpTypeElem::Group(grp.clone()).colour(&elems, false));
             true
         })
         .unwrap();
 
         // Get simplified infix strings
-        let infix_elem = infix_group(&program).colour(&elems, false);
-        let infix_nums = infix_group(&program).colour(numbers, false);
+        let infix_elem = infix_group(programs.instructions(0)).colour(&elems, false);
+        let infix_nums = infix_group(programs.instructions(0)).colour(numbers, false);
 
         // Is a duplicate?
         let mut stack = Vec::new();
         let mut set = HashSet::new();
 
-        let duplicate = duplicated(&program, &mut stack, &mut set);
+        let duplicate = duplicated(programs.instructions(0), &mut stack, &mut set);
 
         // Print details
         println!("RPN: {}, infix (elems): {}, infix (nums): {}, dup : {}, groups: {}",
@@ -106,9 +109,7 @@ mod tests {
         );
 
         // Run the program
-        let mut stack = Vec::new();
-
-        let result = program.run(numbers, &mut stack).unwrap();
+        let result = programs.run(0, numbers).unwrap();
 
         // Check answer
         assert_eq!(exp_ans, result);
@@ -218,14 +219,14 @@ mod tests {
             "0 + 1 + 2 + 3",
         ];
 
-        for prog in programs.programs() {
-            println!("Equation: {}", prog.infix(&numbers, true));
+        for i in 0..programs.len() {
+            println!("Equation: {}", programs.infix(i, &numbers, true));
         }
 
         assert_eq!(expected.len(), programs.len());
 
-        for (exp, prog) in expected.iter().zip(programs.programs().iter()) {
-            assert_eq!(*exp, prog.infix(&numbers, false))
+        for (i, exp) in expected.iter().enumerate() {
+            assert_eq!(*exp, programs.infix(i, &numbers, false))
         }
     }
 }
