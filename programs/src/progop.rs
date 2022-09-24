@@ -43,7 +43,7 @@ impl ProgOp {
     }
 
     /// Returns the string representation of a program operator, optionally coloured
-    pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
+    pub fn colour(&self, numbers: &[u8], colour: bool) -> String {
         let mut res = match *self & ProgOp::PROG_OP_MASK {
             ProgOp::PROG_OP_NUM => numbers[self.bits as usize].num_format(),
             ProgOp::PROG_OP_ADD => "+".to_string(),
@@ -111,13 +111,13 @@ pub enum ProgErr {
 
 /// Runs the program with a given set of numbers and preallocated stack
 #[inline]
-pub(crate) fn run_instructions(instructions: &[ProgOp], numbers: &[u32], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
+pub(crate) fn run_instructions(instructions: &[ProgOp], numbers: &[u8], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
     // NB this does not use the process function for speed
     stack.clear();
 
     for op in instructions {
         match *op & ProgOp::PROG_OP_MASK {
-            ProgOp::PROG_OP_NUM => stack.push(numbers[op.bits as usize]),
+            ProgOp::PROG_OP_NUM => stack.push(numbers[op.bits as usize] as u32),
             ProgOp::PROG_OP_ADD => {
                 let n1 = stack.pop().unwrap();
                 let n2 = stack.pop().unwrap();

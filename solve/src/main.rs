@@ -1,11 +1,11 @@
 use std::collections::HashSet;
-use std::env;
 use std::process;
 
 use bitflags::bitflags;
+use clap::Parser;
 
-use programs::programs::*;
 use numformat::*;
+use programs::programs::*;
 
 fn main() {
     // Parse command line arguments
@@ -40,7 +40,7 @@ fn main() {
 
                 solutions.retain(|s| {
                     // Filter out duplicated solutions
-                    if !args.inc_duplicated && programs.duplicated(s.program, &mut stack, &mut set) {
+                    if !args.duplicated && programs.duplicated(s.program, &mut stack, &mut set) {
                         duplicate += 1;
                         return false;
                     }
@@ -73,7 +73,6 @@ fn main() {
         }
         Err(code) => {
             // Invalid arguments
-            usage();
             code
         }
     };
@@ -136,118 +135,76 @@ bitflags! {
     }
 }
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
 struct Args {
-    target: u32,
-    cards: Vec<u32>,
-    inc_duplicated: bool,
+    /// Include duplicated equations
+    #[clap(short = 'd', long = "duplicates", action)]
+    duplicated: bool,
+
+    /// Output simplified infix equations
+    #[clap(short = 'i', long = "infix", action)]
+    infix: bool,
+
+    /// Output full infix equations
+    #[clap(short = 'f', long = "full-infix", action)]
+    full_infix: bool,
+
+    /// Output reverse Polish notation
+    #[clap(short = 'r', long = "rpn", action)]
+    rpn: bool,
+
+    /// Output steps
+    #[clap(short = 's', long = "steps", action)]
+    steps: bool,
+
+    /// Output bitmask
+    #[clap(skip)]
     output: Output,
+
+    /// Verbose output
+    #[clap(short = 'v', long = "verbose", action)]
     verbose: bool,
+
+    // Target
+    target: u32,
+
+    // Cards chosen
+    cards: Vec<u8>,
 }
 
 fn parse_args() -> Result<Args, i32> {
-    let mut arg_iter = env::args().skip(1);
-    let mut inc_duplicated = false;
-    let mut verbose = false;
-    let mut output: Output = Default::default();
+    // Parse command line arguments
+    let mut args = Args::parse();
 
-    let mut add_output = |o| -> Result<(), i32> {
-        if output.contains(o) {
-            eprintln!("Only one of -i, -f, -r and -s can be given");
-            Err(1)?;
-        }
-
-        output.insert(o);
-
-        Ok(())
-    };
-
-    // Get target value and any flags from arguments
-    let target = loop {
-        match arg_iter.next() {
-            Some(arg) => {
-                if let Some(switch) = arg.strip_prefix('-') {
-                    // A command line switch
-                    match switch {
-                        "d" | "-duplicated" => {
-                            inc_duplicated = true;
-                        }
-                        "i" | "-infix" => {
-                            add_output(Output::INFIX)?;
-                        }
-                        "f" | "-full-infix" => {
-                            add_output(Output::FULLINFIX)?;
-                        }
-                        "r" | "-rpn" => {
-                            add_output(Output::RPN)?;
-                        }
-                        "s" | "-steps" => {
-                            add_output(Output::STEPS)?;
-                        }
-                        "v" | "-verbose" => {
-                            verbose = true;
-                        }
-                        _ => {
-                            eprintln!("Unrecognised switch '{}'", arg);
-                            Err(1)?;
-                        }
-                    }
-                } else {
-                    // Parse target number
-                    match arg.parse::<u32>() {
-                        Ok(num) => break num,
-                        Err(std::num::ParseIntError { .. }) => {
-                            eprintln!("Target must be a number (\"{}\")", arg);
-                            Err(1)?;
-                        }
-                    }
-                }
-            }
-            None => {
-                eprintln!("No target value");
-                Err(1)?;
-            }
-        }
-    };
-
-    // Get cards from arguments
-    let cards = match arg_iter.map(|a| a.parse::<u32>()).collect::<Result<Vec<u32>, _>>() {
-        Err(std::num::ParseIntError { .. }) => {
-            eprintln!("Cards must be numeric");
-            Err(1)?
-        }
-        Ok(v) => v,
-    };
-
-    if cards.is_empty() {
+    if args.cards.is_empty() {
         eprintln!("No cards specified");
         Err(1)?
     }
 
-    if cards.len() > 6 {
+    if args.cards.len() > 6 {
         eprintln!("Maximum of 6 cards allowed");
         Err(1)?
     }
 
-    if output.is_empty() {
-        output = Output::INFIX | Output::STEPS;
+    // Convert arg booleans to bitmask
+    if args.infix {
+        args.output |= Output::INFIX
+    };
+    if args.full_infix {
+        args.output |= Output::FULLINFIX
+    };
+    if args.rpn {
+        args.output |= Output::RPN
+    };
+    if args.steps {
+        args.output |= Output::STEPS
+    };
+
+    // Default to infix and steps
+    if args.output.is_empty() {
+        args.output = Output::INFIX | Output::STEPS;
     }
 
-    Ok(Args {
-        target,
-        cards,
-        inc_duplicated,
-        output,
-        verbose,
-    })
-}
-
-fn usage() {
-    println!("Usage: solve <flags> <target> <card> [<card> ...]");
-    println!("Where flags are:");
-    println!("  -d | --duplicated   Include duplicated equations");
-    println!("  -i | --infix        Output simplified infix equations");
-    println!("  -f | --full-infix   Output full infix equations");
-    println!("  -r | --rpn          Output reverse Polish notation");
-    println!("  -s | --steps        Output steps");
-    println!("  -v | --verbose      Print verbose progress messages");
+    Ok(args)
 }

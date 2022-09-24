@@ -144,14 +144,14 @@ impl Programs {
     }
 
     /// Runs one of the programs with a given set of numbers
-    pub fn run(&self, prog_elem: usize, numbers: &[u32]) -> Result<u32, ProgErr> {
+    pub fn run(&self, prog_elem: usize, numbers: &[u8]) -> Result<u32, ProgErr> {
         let mut stack: Vec<u32> = Vec::with_capacity(self.nums as usize);
 
         run_instructions(self.instructions(prog_elem), numbers, &mut stack)
     }
 
     /// Runs all of the programs in the programs collection with a given set of numbers and returns the results
-    pub fn run_all(&self, numbers: &Vec<u32>) -> Results {
+    pub fn run_all(&self, numbers: &[u8]) -> Results {
         let mut stack: Vec<u32> = Vec::with_capacity(self.nums as usize);
         let mut results = Results::new();
 
@@ -185,7 +185,7 @@ impl Programs {
     }
 
     /// Runs all of the programs in the programs collection with a given set of numbers and a target and returns the solutions
-    pub fn run_all_target(&self, target: u32, numbers: &Vec<u32>) -> Vec<Solution> {
+    pub fn run_all_target(&self, target: u32, numbers: &[u8]) -> Vec<Solution> {
         let mut stack: Vec<u32> = Vec::with_capacity(numbers.len());
         let mut solutions = Vec::new();
 
@@ -215,14 +215,14 @@ impl Programs {
     }
 
     /// Returns the formatted steps of a program for a given set of numbers
-    pub fn steps(&self, prog_elem: usize, numbers: &[u32], colour: bool) -> Vec<String> {
+    pub fn steps(&self, prog_elem: usize, numbers: &[u8], colour: bool) -> Vec<String> {
         let mut steps = Vec::new();
         let mut stack: Vec<(u32, String)> = Vec::with_capacity(numbers.len());
 
         process_instructions(
             self.instructions(prog_elem),
             &mut stack,
-            |n| Some((numbers[n as usize], ProgOp::new_number(n).colour(numbers, colour))),
+            |n| Some((numbers[n as usize] as u32, ProgOp::new_number(n).colour(numbers, colour))),
             |(n2, s2), op, (n1, s1)| {
                 let ans = match op & ProgOp::PROG_OP_MASK {
                     ProgOp::PROG_OP_ADD => n2 + n1,
@@ -251,12 +251,12 @@ impl Programs {
     }
 
     /// Converts the RPN program to operator type grouped infix equation
-    pub fn infix(&self, prog_elem: usize, numbers: &[u32], colour: bool) -> String {
+    pub fn infix(&self, prog_elem: usize, numbers: &[u8], colour: bool) -> String {
         infix_group(self.instructions(prog_elem)).colour(numbers, colour)
     }
 
     /// Converts the RPN program to full infix equation
-    pub fn infix_full(&self, prog_elem: usize, numbers: &[u32], colour: bool) -> String {
+    pub fn infix_full(&self, prog_elem: usize, numbers: &[u8], colour: bool) -> String {
         let mut stack: Vec<String> = Vec::with_capacity(numbers.len());
 
         let infix = process_instructions(
@@ -276,7 +276,7 @@ impl Programs {
     }
 
     /// Converts the RPN program to a string for a given set of numbers
-    pub fn rpn(&self, prog_elem: usize, numbers: &[u32], colour: bool) -> String {
+    pub fn rpn(&self, prog_elem: usize, numbers: &[u8], colour: bool) -> String {
         self.instructions(prog_elem)
             .iter()
             .map(|i| i.colour(numbers, colour))

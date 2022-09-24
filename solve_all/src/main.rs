@@ -74,9 +74,10 @@ fn main() {
         // Generate card combinations
         print!("Generating card combinations...");
         io::stdout().flush().unwrap();
+
         let card_combs = Arc::new(Mutex::new({
-            let mut card_combs: VecDeque<Vec<u32>> = VecDeque::new();
-            let mut hash: HashSet<Vec<&u32>> = HashSet::new();
+            let mut card_combs: VecDeque<Vec<u8>> = VecDeque::new();
+            let mut hash: HashSet<Vec<&u8>> = HashSet::new();
 
             for choice in cards.iter().combinations(6) {
                 if !hash.contains(&choice) {
@@ -159,7 +160,7 @@ fn main() {
     }
 }
 
-fn create_out_dir(args: &mut Args, cards: &[u32]) -> bool {
+fn create_out_dir(args: &mut Args, cards: &[u8]) -> bool {
     let mut ok = true;
 
     if args.out_dir.is_empty() {
@@ -189,7 +190,7 @@ fn create_out_dir(args: &mut Args, cards: &[u32]) -> bool {
     ok
 }
 
-fn file_paths(args: &Args, numbers: &[u32]) -> (String, String) {
+fn file_paths(args: &Args, numbers: &[u8]) -> (String, String) {
     let nums_str = numbers.iter().map(|n| format!("{}", n)).join("-");
 
     let file_name = format!("{}.txt", nums_str);
@@ -212,7 +213,7 @@ fn needs_calculating(args: &Args, file_path: &String, eqn_file_path: &String) ->
     false
 }
 
-fn solve(args: &Args, programs: &Programs, numbers: &Vec<u32>, file_path: &String, eqn_file_path: &String) {
+fn solve(args: &Args, programs: &Programs, numbers: &[u8], file_path: &String, eqn_file_path: &String) {
     // Run all of the programs for this set of numbers
     let results = programs.run_all(numbers);
 

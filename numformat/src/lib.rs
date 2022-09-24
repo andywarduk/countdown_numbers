@@ -30,3 +30,5 @@ macro_rules! gen_impl {
 
 gen_impl!(usize);
 gen_impl!(u32);
+gen_impl!(u16);
+gen_impl!(u8);

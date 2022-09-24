@@ -87,12 +87,12 @@ mod tests {
     use crate::programs::*;
     use itertools::Itertools;
 
-    fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: DupReason) {
+    fn test_int(rpn: &str, numbers: &[u8], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: DupReason) {
         // Create program
         let programs: Programs = rpn.into();
 
         // Create element vector
-        let elems: Vec<u32> = (0..numbers.len()).map(|i| i as u32).collect();
+        let elems = (0..numbers.len()).map(|i| i as u8).collect::<Vec<_>>();
 
         // Get infix groups
         let mut groups = Vec::new();

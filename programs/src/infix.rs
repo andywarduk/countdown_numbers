@@ -22,11 +22,11 @@ pub enum InfixGrpTypeElem {
 
 impl InfixGrpTypeElem {
     /// Formats an operator type simplification equation element with optional colour
-    pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
+    pub fn colour(&self, numbers: &[u8], colour: bool) -> String {
         self.colour_internal(numbers, colour, false)
     }
 
-    fn colour_internal(&self, numbers: &[u32], colour: bool, brackets: bool) -> String {
+    fn colour_internal(&self, numbers: &[u8], colour: bool, brackets: bool) -> String {
         let mut no_brackets = false;
 
         let inner = match self {
@@ -204,12 +204,12 @@ mod tests {
             .filter(|i| i.is_number())
             .count();
 
-        let numbers: Vec<u32> = (0..num_count).map(|i| i as u32).collect();
+        let numbers = (0..num_count).map(|i| i as u8).collect::<Vec<_>>();
 
         test_program_infix(&programs, exp_infix, &numbers);
     }
 
-    fn test_rpn_infix_and_result(rpn: &str, exp_infix: &str, numbers: &[u32], exp_ans: Result<u32, ProgErr>) {
+    fn test_rpn_infix_and_result(rpn: &str, exp_infix: &str, numbers: &[u8], exp_ans: Result<u32, ProgErr>) {
         let programs: Programs = rpn.into();
 
         test_program_infix(&programs, exp_infix, numbers);
@@ -219,7 +219,7 @@ mod tests {
         assert_eq!(exp_ans, ans);
     }
 
-    fn test_program_infix(programs: &Programs, exp_infix: &str, numbers: &[u32]) {
+    fn test_program_infix(programs: &Programs, exp_infix: &str, numbers: &[u8]) {
         let infix = infix_group(programs.instructions(0));
 
         println!("RPN: {}, infix: {}", programs.rpn(0, numbers, false), infix.colour(numbers, false));

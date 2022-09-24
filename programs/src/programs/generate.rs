@@ -88,15 +88,25 @@ pub(crate) fn generate_num_programs(
             
             match reason {
                 DupReason::NotDup => true,
-                DupReason::TermOrder => { term_dups += 1; false}
-                DupReason::Infix => { infix_dups += 1; false }
+                DupReason::TermOrder => {
+                    term_dups += 1;
+                    false
+                }
+                DupReason::Infix => {
+                    infix_dups += 1;
+                    false
+                }
             }
         } else {
             true
         };
 
         if ok {
-            programs.push(ProgInstr { start: inst_start as u32, end: inst_end as u32 });
+            programs.push(ProgInstr {
+                start: inst_start as u32,
+                end: inst_end as u32,
+            });
+
             inst_start = new_start;
         } else {
             instructions.truncate(inst_start);
