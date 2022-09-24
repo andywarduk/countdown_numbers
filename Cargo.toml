@@ -1,5 +1,8 @@
-[workspace]
+[workspace.package]
+edition = "2021"
+authors = ["Andrew Ward (andy.ward.uk@gmail.com)"]
 
+[workspace]
 members = [
     "cards",
     "programs",
@@ -11,3 +14,4 @@ members = [
 
 [profile.release]
 debug = true
+lto = true

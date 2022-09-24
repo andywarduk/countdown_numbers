@@ -1,9 +1,8 @@
 [package]
 name = "solve_all"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition.workspace = true
+authors.workspace = true
 
 [dependencies]
 cards = { path = "../cards" }
@@ -12,3 +11,5 @@ programs = { path = "../programs" }
 clap = { version = "3.2.20", features = ["derive"] }
 itertools = "0.10.3"
 num_cpus = "1.13.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
