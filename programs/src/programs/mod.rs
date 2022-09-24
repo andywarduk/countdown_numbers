@@ -424,6 +424,13 @@ impl PartialEq for Solution {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::mem;
+
+    #[test]
+    fn test_size() {
+        // Make sure ProgInstr is packed correctly (2 * 32 bit uints)
+        assert_eq!(32 * 2, mem::size_of::<ProgInstr>() * 8);
+    }
 
     #[test]
     fn prog_add() {
