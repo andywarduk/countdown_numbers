@@ -5,41 +5,60 @@ use std::process;
 use bitflags::bitflags;
 
 use programs::programs::*;
+use numformat::*;
 
 fn main() {
     // Parse command line arguments
     let exit_code = match parse_args() {
         Ok(args) => {
             // Arguments ok
-            println!("Target {}, Cards {:?}", args.target, args.cards);
+            if args.verbose {
+                println!("Target {}, Cards {:?}", args.target, args.cards);
+            }
 
             println!("Generating programs...");
-            let programs = Programs::new(args.cards.len() as u8, true);
+            let programs = Programs::new(args.cards.len() as u8, true, args.verbose);
 
-            println!("Running {} programs...", programs.len());
+            println!("Running programs...");
             let mut solutions = programs.run_all_target(args.target, &args.cards);
 
+            if args.verbose {
+                println!("{} total solutions found", solutions.len().num_format());
+            }
+
             if solutions.is_empty() {
-                println!("== No solutions ==");
+                if !args.verbose {
+                    println!("== No solutions ==");
+                }
             } else {
                 let mut rpn_set = HashSet::with_capacity(solutions.len());
                 let mut stack = Vec::new();
                 let mut set = HashSet::new();
 
-                solutions = solutions
-                    .into_iter()
-                    .filter(|s| {
-                        // Filter out duplicated solutions
-                        if !args.inc_duplicated && programs.duplicated(s.program, &mut stack, &mut set) {
-                            return false;
-                        }
+                let mut duplicate = 0;
+                let mut identical = 0;
 
-                        // Filter out identical equations (can happen when duplicate card is chosen)
-                        let rpn = programs.rpn(s.program, &args.cards, false);
+                solutions.retain(|s| {
+                    // Filter out duplicated solutions
+                    if !args.inc_duplicated && programs.duplicated(s.program, &mut stack, &mut set) {
+                        duplicate += 1;
+                        return false;
+                    }
 
-                        rpn_set.insert(rpn)
-                    })
-                    .collect();
+                    // Filter out identical equations (can happen when duplicate card is chosen)
+                    let rpn = programs.rpn(s.program, &args.cards, false);
+
+                    if rpn_set.insert(rpn) {
+                        true
+                    } else {
+                        identical += 1;
+                        false
+                    }
+                });
+
+                if args.verbose {
+                    println!("Filtered out {} duplicate and {} identical solutions", duplicate, identical);
+                }
 
                 println!("{} {} found", solutions.len(), if solutions.len() == 1 { "solution" } else { "solutions" });
 
@@ -122,11 +141,13 @@ struct Args {
     cards: Vec<u32>,
     inc_duplicated: bool,
     output: Output,
+    verbose: bool,
 }
 
 fn parse_args() -> Result<Args, i32> {
     let mut arg_iter = env::args().skip(1);
     let mut inc_duplicated = false;
+    let mut verbose = false;
     let mut output: Output = Default::default();
 
     let mut add_output = |o| -> Result<(), i32> {
@@ -161,6 +182,9 @@ fn parse_args() -> Result<Args, i32> {
                         }
                         "s" | "-steps" => {
                             add_output(Output::STEPS)?;
+                        }
+                        "v" | "-verbose" => {
+                            verbose = true;
                         }
                         _ => {
                             eprintln!("Unrecognised switch '{}'", arg);
@@ -213,6 +237,7 @@ fn parse_args() -> Result<Args, i32> {
         cards,
         inc_duplicated,
         output,
+        verbose,
     })
 }
 
@@ -224,4 +249,5 @@ fn usage() {
     println!("  -f | --full-infix   Output full infix equations");
     println!("  -r | --rpn          Output reverse Polish notation");
     println!("  -s | --steps        Output steps");
+    println!("  -v | --verbose      Print verbose progress messages");
 }

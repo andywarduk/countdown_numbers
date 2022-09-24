@@ -2,6 +2,7 @@
 
 use bitflags::bitflags;
 use colored::*;
+use numformat::*;
 
 bitflags! {
     /// Program operator type bitmask. Top 3 bits are operator type, low 5 bits used for numbers (0-31)
@@ -42,7 +43,7 @@ impl ProgOp {
     /// Returns the string representation of a program operator, optionally coloured
     pub fn colour(&self, numbers: &[u32], colour: bool) -> String {
         let mut res = match *self & ProgOp::PROG_OP_MASK {
-            ProgOp::PROG_OP_NUM => numbers[self.bits as usize].to_string(),
+            ProgOp::PROG_OP_NUM => numbers[self.bits as usize].num_format(),
             ProgOp::PROG_OP_ADD => "+".to_string(),
             ProgOp::PROG_OP_SUB => "-".to_string(),
             ProgOp::PROG_OP_MUL => "×".to_string(),

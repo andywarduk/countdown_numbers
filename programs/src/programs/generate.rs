@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! This module is responsible for generating all possible RPN programs for a game.
 //!
 //! For a set of numbers 1, 2, 3, 4 there are a number of slots in the RPN program
@@ -56,7 +58,7 @@ pub fn generate_num_programs(
     num_perms: &Vec<Vec<u8>>,
     op_map: &HashMap<u8, (OpCounts, OpCombs)>,
     inc_duplicated: bool,
-) {
+) -> (usize, usize) {
     let mut stack = Vec::with_capacity(num_cnt as usize);
 
     let mut set = if inc_duplicated {
@@ -69,22 +71,48 @@ pub fn generate_num_programs(
     // Get operator counts and combinations
     let (op_count, op_comb) = op_map.get(&num_cnt).unwrap();
 
+    // Instruction vector pointer
+    let mut inst_start = instructions.len();
+
+    // Number of duplicates encountered
+    let mut term_dups = 0;
+    let mut infix_dups = 0;
+
+    let mut add_program = |instructions: &mut Vec<ProgOp>| {
+        let new_start = instructions.len();
+        let inst_end = new_start - 1;
+
+        // Duplicate check
+        let ok = if !inc_duplicated {
+            let reason = duplicated(&instructions[inst_start..=inst_end], &mut stack, &mut set);
+            
+            match reason {
+                DupReason::NotDup => true,
+                DupReason::TermOrder => { term_dups += 1; false}
+                DupReason::Infix => { infix_dups += 1; false }
+            }
+        } else {
+            true
+        };
+
+        if ok {
+            programs.push(ProgInstr { start: inst_start as u32, end: inst_end as u32 });
+            inst_start = new_start;
+        } else {
+            instructions.truncate(inst_start);
+        }
+    };
+
     for nums in num_perms {
         if num_cnt == 1 {
-            let inst_start = instructions.len();
-
             // Push the number
             instructions.push(ProgOp::new_number(nums[0]));
 
             // Add the program
-            programs.push(ProgInstr {
-                start: inst_start as u32,
-                end: (instructions.len() - 1) as u32,
-            });
+            add_program(instructions);
         } else {
             for op_count in op_count {
                 for op_comb in op_comb {
-                    let inst_start = instructions.len();
                     let mut op_index = 0;
 
                     // Push first number
@@ -101,22 +129,13 @@ pub fn generate_num_programs(
                         }
                     }
 
-                    let inst_end = instructions.len() - 1;
-                    let program = ProgInstr {
-                        start: inst_start as u32,
-                        end: inst_end as u32,
-                    };
-
-                    // Duplicate check
-                    if inc_duplicated || !duplicated(&instructions[inst_start..=inst_end], &mut stack, &mut set) {
-                        programs.push(program);
-                    } else {
-                        instructions.truncate(inst_start);
-                    }
+                    add_program(instructions);
                 }
             }
         }
     }
+
+    (term_dups, infix_dups)
 }
 
 type OpCounts = Vec<Vec<u8>>;

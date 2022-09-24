@@ -6,6 +6,7 @@ members = [
     "solve",
     "solve_all",
     "stats",
+    "numformat",
 ]
 
 [profile.release]

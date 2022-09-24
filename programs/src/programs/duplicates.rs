@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! This module is responsible for detecting if an RPN program would be duplicated by another RPN program
 //! if the order of operations is changed. It does this by converting the RPN to bracketed infix and
 //! for each bracket group applying the following rules:
@@ -16,13 +18,20 @@ use std::collections::HashSet;
 use crate::infix::*;
 use crate::progop::*;
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum DupReason {
+    NotDup,
+    TermOrder,
+    Infix,
+}
+
 /// Returns true if the program would be duplicated by rearranging the terms of the equation
 pub fn duplicated(
     instructions: &[ProgOp],
     stack: &mut Vec<InfixGrpTypeElem>,
     set: &mut HashSet<InfixGrpTypeElem>,
-) -> bool {
-    infix_group_cb_stack(instructions, stack, &mut |grp| {
+) -> DupReason {
+    match infix_group_cb_stack(instructions, stack, &mut |grp| {
         let mut second_op = false;
         let mut in_terms = false;
         let mut last_num: u8 = 0;
@@ -62,9 +71,14 @@ pub fn duplicated(
         }
 
         true
-    })
-    .and_then(|grp| if set.insert(grp) { Some(()) } else { None })
-    .is_none()
+    }) {
+        Some(grp) => if set.insert(grp) {
+            DupReason::NotDup
+        } else {
+            DupReason::Infix
+        }
+        None => DupReason::TermOrder,
+    }
 }
 
 #[cfg(test)]
@@ -73,7 +87,7 @@ mod tests {
     use crate::programs::*;
     use itertools::Itertools;
 
-    fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: bool) {
+    fn test_int(rpn: &str, numbers: &[u32], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: DupReason) {
         // Create program
         let programs: Programs = rpn.into();
 
@@ -100,7 +114,7 @@ mod tests {
         let duplicate = duplicated(programs.instructions(0), &mut stack, &mut set);
 
         // Print details
-        println!("RPN: {}, infix (elems): {}, infix (nums): {}, dup : {}, groups: {}",
+        println!("RPN: {}, infix (elems): {}, infix (nums): {}, dup : {:?}, groups: {}",
             rpn,
             infix_elem,
             infix_nums,
@@ -126,74 +140,79 @@ mod tests {
 
     #[test]
     fn test1() {
-        test_int("0 1 +", &[10, 20], "10 + 20", 30, 1, false);
-        test_int("1 0 +", &[10, 20], "20 + 10", 30, 1, true);
+        test_int("0 1 +", &[10, 20], "10 + 20", 30, 1, DupReason::NotDup);
+        test_int("1 0 +", &[10, 20], "20 + 10", 30, 1, DupReason::TermOrder);
 
-        test_int("0 1 + 2 +", &[10, 20, 30], "10 + 20 + 30", 60, 1, false);
-        test_int("0 2 + 1 +", &[10, 20, 30], "10 + 30 + 20", 60, 1, true);
-        test_int("1 0 + 2 +", &[10, 20, 30], "20 + 10 + 30", 60, 1, true);
-        test_int("1 2 + 0 +", &[10, 20, 30], "20 + 30 + 10", 60, 1, true);
-        test_int("2 0 + 1 +", &[10, 20, 30], "30 + 10 + 20", 60, 1, true);
-        test_int("2 1 + 0 +", &[10, 20, 30], "30 + 20 + 10", 60, 1, true);
+        test_int("0 1 + 2 +", &[10, 20, 30], "10 + 20 + 30", 60, 1, DupReason::NotDup);
+        test_int("0 2 + 1 +", &[10, 20, 30], "10 + 30 + 20", 60, 1, DupReason::TermOrder);
+        test_int("1 0 + 2 +", &[10, 20, 30], "20 + 10 + 30", 60, 1, DupReason::TermOrder);
+        test_int("1 2 + 0 +", &[10, 20, 30], "20 + 30 + 10", 60, 1, DupReason::TermOrder);
+        test_int("2 0 + 1 +", &[10, 20, 30], "30 + 10 + 20", 60, 1, DupReason::TermOrder);
+        test_int("2 1 + 0 +", &[10, 20, 30], "30 + 20 + 10", 60, 1, DupReason::TermOrder);
 
-        test_int("0 1 -", &[20, 15], "20 - 15", 5, 1, false);
-        test_int("1 0 -", &[30, 50], "50 - 30", 20, 1, false);
+        test_int("0 1 -", &[20, 15], "20 - 15", 5, 1, DupReason::NotDup);
+        test_int("1 0 -", &[30, 50], "50 - 30", 20, 1, DupReason::NotDup);
 
-        test_int("0 1 - 2 -", &[50, 10, 20], "50 - 10 - 20", 20, 1, false);
-        test_int("0 2 - 1 -", &[50, 10, 20], "50 - 20 - 10", 20, 1, true);
-        test_int("1 0 - 2 -", &[10, 50, 20], "50 - 10 - 20", 20, 1, false);
-        test_int("1 2 - 0 -", &[10, 50, 20], "50 - 20 - 10", 20, 1, true);
-        test_int("2 0 - 1 -", &[10, 20, 50], "50 - 10 - 20", 20, 1, false);
-        test_int("2 1 - 0 -", &[10, 20, 50], "50 - 20 - 10", 20, 1, true);
+        test_int("0 1 - 2 -", &[50, 10, 20], "50 - 10 - 20", 20, 1, DupReason::NotDup);
+        test_int("0 2 - 1 -", &[50, 10, 20], "50 - 20 - 10", 20, 1, DupReason::TermOrder);
+        test_int("1 0 - 2 -", &[10, 50, 20], "50 - 10 - 20", 20, 1, DupReason::NotDup);
+        test_int("1 2 - 0 -", &[10, 50, 20], "50 - 20 - 10", 20, 1, DupReason::TermOrder);
+        test_int("2 0 - 1 -", &[10, 20, 50], "50 - 10 - 20", 20, 1, DupReason::NotDup);
+        test_int("2 1 - 0 -", &[10, 20, 50], "50 - 20 - 10", 20, 1, DupReason::TermOrder);
 
         // (0 - 1) + 2 == 0 - 1 + 2 == 1
-        test_int("2 1 - 0 +", &[5, 10, 30], "30 - 10 + 5", 25, 1, true);
+        test_int("2 1 - 0 +", &[5, 10, 30], "30 - 10 + 5", 25, 1, DupReason::TermOrder);
 
         // 0 - (1 + 2) == -3 != 0 - 1 + 2 == 1
-        test_int("0 1 2 + -", &[100, 10, 30], "100 - (10 + 30)", 60, 2, false);
+        test_int("0 1 2 + -", &[100, 10, 30], "100 - (10 + 30)", 60, 2, DupReason::NotDup);
 
         // (0 + 1) + (2 + 3) == 0 + 1 + 2 + 3
-        test_int("0 1 + 2 3 + +", &[2, 3, 5, 7], "2 + 3 + 5 + 7", 17, 1, false);
+        test_int("0 1 + 2 3 + +", &[2, 3, 5, 7], "2 + 3 + 5 + 7", 17, 1, DupReason::NotDup);
 
         // (0 - 1) + (2 + 3) == 0 - 1 + 2 + 3
-        test_int("0 1 - 2 3 + +", &[5, 2, 6, 7], "5 - 2 + 6 + 7", 16, 1, true);
+        test_int("0 1 - 2 3 + +", &[5, 2, 6, 7], "5 - 2 + 6 + 7", 16, 1, DupReason::TermOrder);
 
         // (0 + 1) - (2 + 3) == 0 + 1 - (2 + 3)
-        test_int("0 1 + 2 3 + -", &[5, 11, 6, 7], "5 + 11 - (6 + 7)", 3, 2, false);
+        test_int("0 1 + 2 3 + -", &[5, 11, 6, 7], "5 + 11 - (6 + 7)", 3, 2, DupReason::NotDup);
 
         // (0 + 1) + (2 - 3) == 0 + 1 + 2 - 3
-        test_int("0 1 + 2 3 - +", &[5, 11, 9, 7], "5 + 11 + 9 - 7", 18, 1, false);
+        test_int("0 1 + 2 3 - +", &[5, 11, 9, 7], "5 + 11 + 9 - 7", 18, 1, DupReason::NotDup);
 
         // (0 - 1) - (2 + 3)
-        test_int("0 1 - 2 3 + -", &[20, 5, 7, 3], "20 - 5 - (7 + 3)", 5, 2, false);
+        test_int("0 1 - 2 3 + -", &[20, 5, 7, 3], "20 - 5 - (7 + 3)", 5, 2, DupReason::NotDup);
     }
 
     #[test]
     fn test2() {
         // Rearrangements /*
         // ((0 x 1) / 2) + 3 - 4
-        test_int("0 1 * 2 / 3 + 4 -", &[20, 30, 10, 7, 5], "(20 × 30 / 10) + 7 - 5", 62, 2, true);
+        test_int("0 1 * 2 / 3 + 4 -", &[20, 30, 10, 7, 5], "(20 × 30 / 10) + 7 - 5", 62, 2, DupReason::TermOrder);
         // ((0 x 1) / 2) - 4 + 3
-        test_int("0 1 * 2 / 4 - 3 +", &[20, 30, 10, 7, 5], "(20 × 30 / 10) - 5 + 7", 62, 2, true);
+        test_int("0 1 * 2 / 4 - 3 +", &[20, 30, 10, 7, 5], "(20 × 30 / 10) - 5 + 7", 62, 2, DupReason::TermOrder);
         // 3 + ((0 x 1) / 2) - 4
-        test_int("3 0 1 * 2 / + 4 -", &[20, 30, 10, 7, 5], "7 + (20 × 30 / 10) - 5", 62, 2, false);
+        test_int("3 0 1 * 2 / + 4 -", &[20, 30, 10, 7, 5], "7 + (20 × 30 / 10) - 5", 62, 2, DupReason::NotDup);
         // 3 - 4 + ((0 x 1) / 2)
-        test_int("3 4 - 0 1 * 2 / +", &[20, 30, 10, 7, 5], "7 - 5 + (20 × 30 / 10)", 62, 2, true);
+        test_int("3 4 - 0 1 * 2 / +", &[20, 30, 10, 7, 5], "7 - 5 + (20 × 30 / 10)", 62, 2, DupReason::TermOrder);
     }
 
     #[test]
     fn test3() {
         // RPN: 75 50 100 10 + 10 / - +
         // Equation: 75 + 50 - (100 + 10) / 10 = 114
-        test_int("1 2 0 3 + 4 / - +", &[100, 75, 50, 10, 10], "75 + 50 - ((100 + 10) / 10)", 114, 3, false);
+        test_int("1 2 0 3 + 4 / - +", &[100, 75, 50, 10, 10], "75 + 50 - ((100 + 10) / 10)", 114, 3, DupReason::NotDup);
         // RPN: 100 25 10 × 10 - × 75 50 + /
         // Equation: 100 × (25 × 10 - 10) / (75 + 50) = 192
-        test_int("0 3 4 * 5 - * 1 2 + /", &[100, 75, 50, 25, 10, 10], "100 × ((25 × 10) - 10) / (75 + 50)", 192, 4, false);
+        test_int("0 3 4 * 5 - * 1 2 + /", &[100, 75, 50, 25, 10, 10], "100 × ((25 × 10) - 10) / (75 + 50)", 192, 4, DupReason::NotDup);
     }
 
     #[test]
     fn test4() {
-        let programs = Programs::new_with_operators(4, false, vec![ProgOp::PROG_OP_ADD]);
+        let programs = Programs::new_with_operators(
+            4,
+            false,
+            vec![ProgOp::PROG_OP_ADD],
+            false
+        );
 
         let numbers = vec![0, 1, 2, 3];
 

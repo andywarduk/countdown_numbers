@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cargo run --release --bin solve_all -- $@
+cargo run --quiet --release --bin solve_all -- $@

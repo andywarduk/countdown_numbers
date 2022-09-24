@@ -1,11 +1,10 @@
 [package]
-name = "solve"
+name = "numformat"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-numformat = { path = "../numformat" }
-programs = { path = "../programs" }
-bitflags = "1.3.2"
+num-format = { version = "0.4.0", features = ["with-system-locale"] }
+lazy_static = "1.4.0"

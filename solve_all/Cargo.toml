@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 cards = { path = "../cards" }
+numformat = { path = "../numformat" }
 programs = { path = "../programs" }
 clap = { version = "3.2.20", features = ["derive"] }
 itertools = "0.10.3"

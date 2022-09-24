@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! This module is responsible for holding and running a collection of RPN programs
 
 mod duplicates;
@@ -15,6 +17,7 @@ use crate::infix::*;
 use crate::progop::*;
 use duplicates::*;
 use generate::*;
+use numformat::*;
 
 /// Holds instruction element numbers for each program
 pub struct ProgInstr {
@@ -33,47 +36,90 @@ pub struct Programs {
 
 impl Programs {
     /// Create a new Programs struct
-    pub fn new(nums: u8, inc_duplicated: bool) -> Self {
+    pub fn new(nums: u8, inc_duplicated: bool, verbose: bool) -> Self {
         let operators = vec![
             ProgOp::PROG_OP_ADD,
             ProgOp::PROG_OP_SUB,
             ProgOp::PROG_OP_MUL,
-            ProgOp::PROG_OP_DIV
+            ProgOp::PROG_OP_DIV,
         ];
 
-        Self::new_with_operators(nums, inc_duplicated, operators)
+        Self::new_with_operators(nums, inc_duplicated, operators, verbose)
     }
 
     /// Create a new Programs struct with a given set of valid operators
-    pub fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>) -> Self {
-        // Calculate number permutations
+    pub fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>, verbose: bool) -> Self {
+        // Calculate number permutations (=nums!)
         let num_perms: Vec<_> = (0..nums).permutations(nums as usize).collect();
+
+        if verbose {
+            println!("Card permutations: {}", num_perms.len().num_format());
+        }
 
         // Calculate operator counts and combintions
         let mut op_map = HashMap::with_capacity(nums as usize);
 
+        if verbose {
+            println!("Operator placement counts and combinations for number of numbers:")
+        }
+
         for num_cnt in 1..=nums {
-            assert!(op_map
-                .insert(num_cnt, (op_counts(num_cnt), op_combs(num_cnt, &operators)))
-                .is_none());
+            let op_count = op_counts(num_cnt);
+            let op_comb = op_combs(num_cnt, &operators);
+
+            if verbose {
+                println!("  {}: {:>6} {:>6}", num_cnt, op_count.len().num_format(), op_comb.len().num_format());
+            }
+
+            assert!(op_map.insert(num_cnt, (op_count, op_comb)).is_none());
         }
 
         // Create a vector to store the programs
-        let prog_cnt = calc_num_programs(nums, inc_duplicated, &num_perms, &op_map);
-        let mut program_vec = Vec::with_capacity(prog_cnt);
+        let prog_cnt_guess = calc_num_programs(nums, inc_duplicated, &num_perms, &op_map);
+        let mut program_vec = Vec::with_capacity(prog_cnt_guess);
 
         // Create a vector to store program instructions
-        let mut instruction_vec = Vec::with_capacity(prog_cnt * (nums as usize + (nums as usize - 1)));
+        let ins_cnt_guess = prog_cnt_guess * (nums as usize + (nums as usize - 1));
+        let mut instruction_vec = Vec::with_capacity(ins_cnt_guess);
+
+        // Vector to hold duplicate count
+        let mut dups = Vec::with_capacity(nums as usize);
 
         for num_cnt in 1..=nums {
             // Generate programs
-            generate_num_programs(
+            dups.push(generate_num_programs(
                 &mut program_vec,
                 &mut instruction_vec,
                 num_cnt,
                 &num_perms,
                 &op_map,
                 inc_duplicated,
+            ));
+        }
+
+        if verbose {
+            if !inc_duplicated {
+                println!("Duplicate programs filtered by number of numbers:");
+
+                for (i, (term_dups, infix_dups)) in dups.iter().enumerate() {
+                    println!("  {:>5}: terms {:>10}  infix {:>10}", i + 1, term_dups.num_format(), infix_dups.num_format());
+                }
+
+                let (tterms, tinfix) = dups
+                    .iter()
+                    .fold((0, 0), |(tt, ti), (t, i)| (tt + *t, ti + *i));
+
+                println!("  Total: terms {:>10}  infix {:>10}", tterms.num_format(), tinfix.num_format());
+            }
+
+            println!("{} programs generated (guessed {})",
+                program_vec.len().num_format(),
+                prog_cnt_guess.num_format(),
+            );
+
+            println!("{} total instructions (guessed {})",
+                instruction_vec.len().num_format(),
+                ins_cnt_guess.num_format(),
             );
         }
 
@@ -187,7 +233,7 @@ impl Programs {
                     _ => panic!("Non-operator not expected"),
                 };
 
-                let ans_str = ans.to_string();
+                let ans_str = ans.num_format();
 
                 let equals = if colour {
                     "=".dimmed().to_string()
@@ -245,7 +291,7 @@ impl Programs {
         stack: &mut Vec<InfixGrpTypeElem>,
         set: &mut HashSet<InfixGrpTypeElem>,
     ) -> bool {
-        duplicated(self.instructions(prog_elem), stack, set)
+        duplicated(self.instructions(prog_elem), stack, set) != DupReason::NotDup
     }
 }
 
