@@ -19,7 +19,7 @@ use crate::programs::*;
 
 /// Calculates the number of programs that will be generated for a given number of numbers.
 /// When duplicates are filtered out an estimate is returned
-pub fn calc_num_programs(
+pub(crate) fn calc_num_programs(
     nums: u8,
     inc_duplicated: bool,
     num_perms: &Vec<Vec<u8>>,
@@ -51,7 +51,7 @@ pub fn calc_num_programs(
 
 /// Generates RPN programs for the given total number of numbers, the number of numbers selected
 /// and operator counts and combinations
-pub fn generate_num_programs(
+pub(crate) fn generate_num_programs(
     programs: &mut Vec<ProgInstr>,
     instructions: &mut Vec<ProgOp>,
     num_cnt: u8,
@@ -141,7 +141,7 @@ pub fn generate_num_programs(
 type OpCounts = Vec<Vec<u8>>;
 
 /// Generates a vector of vectors containing the combinations of number of operators in each slot in the RPN program
-pub fn op_counts(nums: u8) -> OpCounts {
+pub(crate) fn op_counts(nums: u8) -> OpCounts {
     let factorial = |num: usize| -> usize {
         match num {
             0 => 1,
@@ -200,7 +200,7 @@ fn op_counts_rec(
 type OpCombs = Vec<Vec<ProgOp>>;
 
 /// Generates a vector of vectors containing the combinations of operators to use in the RPN programs
-pub fn op_combs(nums: u8, operators: &Vec<ProgOp>) -> OpCombs {
+pub(crate) fn op_combs(nums: u8, operators: &Vec<ProgOp>) -> OpCombs {
     let result_len = if nums > 1 {
         operators.len().pow(nums as u32 - 1)
     } else {

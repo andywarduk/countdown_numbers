@@ -2,6 +2,7 @@
 
 //! This module is responsible for holding and running a collection of RPN programs
 
-pub mod infix;
-pub mod progop;
+mod infix;
+mod progop;
+
 pub mod programs;

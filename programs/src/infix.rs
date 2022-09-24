@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! This module is responsible for converting an RPN program in to an infix expression.
 //! For a given RPN program a tree of elements is returned describing the grouping of
 //! operations.
@@ -64,12 +66,12 @@ impl InfixGrpTypeElem {
 }
 
 /// Returns the infix structure for the program
-pub fn infix_group(instructions: &[ProgOp]) -> InfixGrpTypeElem {
+pub(crate) fn infix_group(instructions: &[ProgOp]) -> InfixGrpTypeElem {
     infix_group_cb(instructions, &mut |_| true).unwrap()
 }
 
 /// Returns an operator type simplified equation tree for a program
-pub fn infix_group_cb<F>(instructions: &[ProgOp], grp_cb: &mut F) -> Option<InfixGrpTypeElem>
+pub(crate) fn infix_group_cb<F>(instructions: &[ProgOp], grp_cb: &mut F) -> Option<InfixGrpTypeElem>
 where
     F: FnMut(&Vec<(ProgOp, InfixGrpTypeElem)>) -> bool,
 {
@@ -79,7 +81,7 @@ where
 }
 
 /// Returns an operator type simplified equation tree for a program
-pub fn infix_group_cb_stack<F>(
+pub(crate) fn infix_group_cb_stack<F>(
     instructions: &[ProgOp],
     stack: &mut Vec<InfixGrpTypeElem>,
     grp_cb: &mut F,

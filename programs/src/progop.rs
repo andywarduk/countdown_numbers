@@ -1,4 +1,6 @@
-//! This module contains the enum of valid operators in an RPN program
+#![warn(missing_docs)]
+
+//! This module contains operators for RPN programs and functions to process a stream of instructions
 
 use bitflags::bitflags;
 use colored::*;
@@ -65,7 +67,7 @@ impl ProgOp {
 
 /// Processes a set of instructions calling callbacks for numbers and operations
 #[inline]
-pub fn process_instructions<S, N, T>(
+pub(crate) fn process_instructions<S, N, T>(
     instructions: &[ProgOp],
     stack: &mut Vec<S>,
     mut num_cb: N,
@@ -109,7 +111,7 @@ pub enum ProgErr {
 
 /// Runs the program with a given set of numbers and preallocated stack
 #[inline]
-pub fn run_instructions(instructions: &[ProgOp], numbers: &[u32], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
+pub(crate) fn run_instructions(instructions: &[ProgOp], numbers: &[u32], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
     // NB this does not use the process function for speed
     stack.clear();
 

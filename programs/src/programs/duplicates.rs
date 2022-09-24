@@ -19,14 +19,14 @@ use crate::infix::*;
 use crate::progop::*;
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum DupReason {
+pub(crate) enum DupReason {
     NotDup,
     TermOrder,
     Infix,
 }
 
 /// Returns true if the program would be duplicated by rearranging the terms of the equation
-pub fn duplicated(
+pub(crate) fn duplicated(
     instructions: &[ProgOp],
     stack: &mut Vec<InfixGrpTypeElem>,
     set: &mut HashSet<InfixGrpTypeElem>,

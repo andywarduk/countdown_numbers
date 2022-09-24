@@ -8,7 +8,6 @@ mod generate;
 use std::cmp::max;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
-use std::ops::Index;
 
 use colored::Colorize;
 use itertools::Itertools;
@@ -20,7 +19,7 @@ use generate::*;
 use numformat::*;
 
 /// Holds instruction element numbers for each program
-pub struct ProgInstr {
+pub(crate) struct ProgInstr {
     /// Start element of the instructions vector
     pub start: u32,
     /// End element of the instructions vector
@@ -48,7 +47,7 @@ impl Programs {
     }
 
     /// Create a new Programs struct with a given set of valid operators
-    pub fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>, verbose: bool) -> Self {
+    fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>, verbose: bool) -> Self {
         // Calculate number permutations (=nums!)
         let num_perms: Vec<_> = (0..nums).permutations(nums as usize).collect();
 
@@ -206,7 +205,7 @@ impl Programs {
     }
 
     /// Returns a slice of instructions for the program element
-    pub fn instructions(&self, prog_elem: usize) -> &[ProgOp] {
+    pub(crate) fn instructions(&self, prog_elem: usize) -> &[ProgOp] {
         self.instructions_for_program(&self.programs[prog_elem])
     }
 
@@ -328,14 +327,6 @@ impl From<&str> for Programs {
             instructions,
             nums,
         }
-    }
-}
-
-impl Index<usize> for Programs {
-    type Output = ProgInstr;
-
-    fn index(&self, idx: usize) -> &Self::Output {
-        &self.programs[idx]
     }
 }
 
