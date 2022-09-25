@@ -4,7 +4,8 @@
 //! For a given RPN program a tree of elements is returned describing the grouping of
 //! operations.
 
-use crate::progop::*;
+use super::progop::ProgOp;
+use super::Programs;
 
 /// Operator type simplification equation element
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -166,7 +167,7 @@ where
         Some(InfixGrpTypeElem::Term(Box::new(t1), op, Box::new(t2)))
     };
 
-    let outer_term = process_instructions(
+    let outer_term = Programs::process_instructions(
         instructions,
         stack,
         |n| Some(InfixGrpTypeElem::Number(n)),
@@ -193,7 +194,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::programs::*;
+    use crate::programs::{ProgErr, Programs};
 
     fn test_rpn_infix(rpn: &str, exp_infix: &str) {
         let programs: Programs = rpn.into();

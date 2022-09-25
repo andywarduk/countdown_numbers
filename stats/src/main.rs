@@ -1,91 +1,47 @@
-use std::env;
+mod calc;
+mod results;
+mod stats;
+
 use std::error::Error;
 use std::fs;
 use std::io;
 use std::io::BufRead;
 use std::path;
+use std::path::PathBuf;
 use std::process;
 
+use clap::Parser;
+
+use results::*;
+use stats::*;
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about)]
+struct Args {
+    /// Directory to process
+    #[clap(value_parser)]
+    dir: PathBuf,
+}
+
 fn main() {
-    let mut arg_iter = env::args();
+    // Parse arguments
+    let args = Args::parse();
 
-    process::exit(if arg_iter.len() != 2 {
-        // Incorrect number of args
-        eprintln!("Usage: stats <dir>");
+    // Create results struct
+    let mut results = Results::default();
 
-        1
-    } else {
-        let mut results = Results::default();
+    // Process the directory
+    let res = process_dir(&mut results, &args.dir);
 
-        // Skip program name
-        arg_iter.next();
-
-        // Get directory to process
-        let dir = arg_iter.next().unwrap();
-
-        // Process the directory
-        let res = process_dir(&mut results, &dir);
-
-        if res == 0 {
-            // Output the results
-            output_results(&results);
-
-            0
-        } else {
-            res
-        }
-    });
-}
-
-const MAX_BIG: usize = 5;
-const TARGET_COUNT: usize = 900;
-
-#[derive(Clone)]
-struct Stats {
-    files: usize,
-    sol_count: Vec<usize>,
-    min_sol_cnt: usize,
-    min_sols: Option<Vec<Vec<u32>>>,
-    max_sol_cnt: usize,
-    max_sols: Option<Vec<Vec<u32>>>,
-    tot_sols: usize,
-    sol_25_bucket: Vec<usize>,
-    sol_50_bucket: Vec<usize>,
-    sol_100_bucket: Vec<usize>,
-}
-
-impl Default for Stats {
-    fn default() -> Self {
-        Self {
-            files: 0,
-            sol_count: vec![0; TARGET_COUNT],
-            min_sol_cnt: 0,
-            min_sols: None,
-            max_sol_cnt: 0,
-            max_sols: None,
-            tot_sols: 0,
-            sol_25_bucket: vec![0; TARGET_COUNT / 25],
-            sol_50_bucket: vec![0; TARGET_COUNT / 50],
-            sol_100_bucket: vec![0; TARGET_COUNT / 100],
-        }
+    if res != 0 {
+        process::exit(res);
     }
+
+    // Output the results
+    results.output();
 }
 
-struct Results {
-    stats: Stats,
-    big_stats: Vec<Stats>,
-}
-
-impl Default for Results {
-    fn default() -> Self {
-        Self {
-            stats: Stats::default(),
-            big_stats: vec![Stats::default(); MAX_BIG],
-        }
-    }
-}
-
-fn process_dir(results: &mut Results, dir: &str) -> i32 {
+fn process_dir(results: &mut Results, dir: &PathBuf) -> i32 {
     match fs::read_dir(dir) {
         Ok(files) => {
             for f in files.flatten() {
@@ -99,7 +55,7 @@ fn process_dir(results: &mut Results, dir: &str) -> i32 {
             0
         }
         Err(e) => {
-            eprintln!("Failed to scan {} ({})", dir, e);
+            eprintln!("Failed to scan {} ({})", dir.display(), e);
 
             2
         }
@@ -108,7 +64,7 @@ fn process_dir(results: &mut Results, dir: &str) -> i32 {
 
 struct FileDetails {
     path: path::PathBuf,
-    cards: Vec<u32>,
+    cards: Vec<u8>,
 }
 
 fn result_file_details(f: fs::DirEntry) -> Option<FileDetails> {
@@ -136,8 +92,8 @@ fn result_file_details(f: fs::DirEntry) -> Option<FileDetails> {
     // Check file stem
     let cards = file_stem
         .split('-')
-        .map(|c| c.parse::<u32>())
-        .collect::<Result<Vec<u32>, _>>()
+        .map(|c| c.parse::<u8>())
+        .collect::<Result<Vec<_>, _>>()
         .ok()?;
 
     // Check we have some numbers
@@ -174,196 +130,7 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
         }
     }
 
-    update_stats(&mut results.stats, details, sols, &sol_reached);
-
-    // Update big number stats
-    let big_cnt = details.cards.iter().filter(|&c| *c > 10).count();
-
-    if big_cnt < MAX_BIG {
-        update_stats(&mut results.big_stats[big_cnt], details, sols, &sol_reached);
-    }
+    results.update(&details.cards, sols, &sol_reached);
 
     Ok(())
-}
-
-fn update_stats(stats: &mut Stats, details: &FileDetails, sols: usize, sol_reached: &[bool]) {
-    for (i, reached) in sol_reached.iter().enumerate() {
-        if *reached {
-            stats.sol_count[i] += 1;
-        }
-    }
-
-    // Count this file
-    stats.files += 1;
-
-    // Add solution count to the total number of solutions
-    stats.tot_sols += sols;
-
-    if sols > 0 {
-        // Add count to the count buckets
-        stats.sol_25_bucket[(sols - 1) / 25] += 1;
-        stats.sol_50_bucket[(sols - 1) / 50] += 1;
-        stats.sol_100_bucket[(sols - 1) / 100] += 1;
-    }
-
-    // Update minimum solutions list
-    if stats.min_sols.is_none() {
-        stats.min_sols = Some(Vec::new());
-        stats.min_sol_cnt = sols;
-    }
-
-    if sols < stats.min_sol_cnt {
-        let min_sols = stats.min_sols.as_mut().unwrap();
-        min_sols.clear();
-        stats.min_sol_cnt = sols;
-    }
-
-    if sols == stats.min_sol_cnt {
-        let min_sols = stats.min_sols.as_mut().unwrap();
-        min_sols.push(details.cards.clone());
-    }
-
-    // Update maximum solutions list
-    if stats.max_sols.is_none() {
-        stats.max_sols = Some(Vec::new());
-        stats.max_sol_cnt = sols;
-    }
-
-    if sols > stats.max_sol_cnt {
-        let max_sols = stats.max_sols.as_mut().unwrap();
-        max_sols.clear();
-        stats.max_sol_cnt = sols;
-    }
-
-    if sols == stats.max_sol_cnt {
-        let max_sols = stats.max_sols.as_mut().unwrap();
-        max_sols.push(details.cards.clone());
-    }
-}
-
-fn output_results(results: &Results) {
-    output_stats(&results.stats, "Overall");
-
-    println!();
-    println!("Big Number Average Achieved");
-    for i in 0..MAX_BIG {
-        let avg = results.big_stats[i].tot_sols as f64 / results.big_stats[i].files as f64;
-
-        println!("{}, {}, {:.2}, {}", i, results.big_stats[i].files, avg, percentf(avg, 900))
-    }
-
-    for i in 0..MAX_BIG {
-        println!();
-        output_stats(&results.big_stats[i], &format!("{} Big Numbers", i));
-    }
-}
-
-fn output_stats(stats: &Stats, desc: &str) {
-    let mut min_sols = stats.sol_count[0];
-    let mut min_sol_elems = Vec::new();
-    let mut max_sols = stats.sol_count[0];
-    let mut max_sol_elems = Vec::new();
-
-    println!("===== {} =====", desc);
-    println!("Target, Combinations");
-
-    for (i, &n) in stats.sol_count.iter().enumerate() {
-        println!("{}, {}, {}", i + 100, n, percent(n, stats.files));
-
-        if n < min_sols {
-            min_sols = n;
-            min_sol_elems.clear();
-        }
-
-        if n == min_sols {
-            min_sol_elems.push(i);
-        }
-
-        if n > max_sols {
-            max_sols = n;
-            max_sol_elems.clear();
-        }
-
-        if n == max_sols {
-            max_sol_elems.push(i);
-        }
-    }
-
-    let mut cumul;
-
-    println!();
-    println!("{} Targets Achieved (buckets of 25)", desc);
-    cumul = 0;
-    for (i, n) in stats.sol_25_bucket.iter().enumerate() {
-        cumul += n;
-        println!("{}-{}, {}, {}, {}, {}", (i * 25) + 1, (i + 1) * 25, n, percent(*n, stats.files), cumul, percent(cumul, stats.files))
-    }
-
-    println!();
-    println!("{} Targets Achieved (buckets of 50)", desc);
-    cumul = 0;
-    for (i, n) in stats.sol_50_bucket.iter().enumerate() {
-        cumul += n;
-        println!("{}-{}, {}, {}, {}, {}", (i * 50) + 1, (i + 1) * 50, n, percent(*n, stats.files), cumul, percent(cumul, stats.files))
-    }
-
-    println!();
-    println!("{} Targets Achieved (buckets of 100)", desc);
-    cumul = 0;
-    for (i, n) in stats.sol_100_bucket.iter().enumerate() {
-        cumul += n;
-        println!("{}-{}, {}, {}, {}, {}", (i * 100) + 1, (i + 1) * 100, n, percent(*n, stats.files), cumul, percent(cumul, stats.files))
-    }
-
-    println!();
-    println!("{} Statistics", desc);
-
-    let elems = min_sol_elems
-        .iter()
-        .map(|n| (n + 100).to_string())
-        .collect::<Vec<String>>()
-        .join(", ");
-
-    println!("Min Target Achieved, {}, {}, Targets, {}", min_sols, percent(min_sols, stats.files), elems);
-
-    let elems = max_sol_elems
-        .iter()
-        .map(|n| (n + 100).to_string())
-        .collect::<Vec<String>>()
-        .join(", ");
-
-    println!("Max Target Achieved, {}, {}, Targets, {}", max_sols, percent(max_sols, stats.files), elems);
-
-    let avg_achieved = stats.tot_sols as f64 / stats.files as f64;
-    println!("Average Target Achieved, {:.2}, {}", avg_achieved, percentf(avg_achieved, 900));
-
-    let sols = stats.min_sols.as_ref().unwrap();
-    let count = sols.len();
-    print!("Min Solutions, {}, {}, Count, {}", stats.min_sol_cnt, percent(stats.min_sol_cnt, 900), count);
-    
-    if count <= 5 {
-        println!(", Cards, {:?}", sols);
-    } else {
-        println!();
-    }
-
-    let sols = stats.max_sols.as_ref().unwrap();
-    let count = sols.len();
-    print!("Max Solutions, {}, {}, Count, {}", stats.max_sol_cnt, percent(stats.max_sol_cnt, 900), count);
-    
-    if count <= 5 {
-        println!(", Cards, {:?}", sols);
-    } else {
-        println!();
-    }
-
-    println!("Card Combinations, {}", stats.files);
-}
-
-fn percent(n: usize, tot: usize) -> String {
-    format!("{:.2}%", ((n as f64 / tot as f64) * 100f64))
-}
-
-fn percentf(n: f64, tot: usize) -> String {
-    format!("{:.2}%", (n / tot as f64) * 100f64)
 }

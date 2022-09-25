@@ -15,8 +15,8 @@
 
 use std::collections::HashSet;
 
-use crate::infix::*;
-use crate::progop::*;
+use super::infix::{infix_group_cb_stack, InfixGrpTypeElem};
+use super::progop::ProgOp;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum DupReason {
@@ -31,7 +31,7 @@ pub(crate) fn duplicated(
     stack: &mut Vec<InfixGrpTypeElem>,
     set: &mut HashSet<InfixGrpTypeElem>,
 ) -> DupReason {
-    match infix_group_cb_stack(instructions, stack, &mut |grp| {
+    let mut grp_cb = |grp: &Vec<(ProgOp, InfixGrpTypeElem)>| -> bool {
         let mut second_op = false;
         let mut in_terms = false;
         let mut last_num: u8 = 0;
@@ -71,11 +71,15 @@ pub(crate) fn duplicated(
         }
 
         true
-    }) {
-        Some(grp) => if set.insert(grp) {
-            DupReason::NotDup
-        } else {
-            DupReason::Infix
+    };
+
+    match infix_group_cb_stack(instructions, stack, &mut grp_cb) {
+        Some(grp) => {
+            if set.insert(grp) {
+                DupReason::NotDup
+            } else {
+                DupReason::Infix
+            }
         }
         None => DupReason::TermOrder,
     }
@@ -84,7 +88,9 @@ pub(crate) fn duplicated(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::programs::*;
+    use crate::programs::infix::{infix_group, infix_group_cb};
+    use crate::programs::Programs;
+
     use itertools::Itertools;
 
     fn test_int(rpn: &str, numbers: &[u8], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: DupReason) {

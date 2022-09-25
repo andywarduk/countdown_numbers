@@ -1,7 +1,12 @@
 [package]
 name = "stats"
 version = "0.1.0"
+description = "Output statistics from a solve_all run"
 edition.workspace = true
 authors.workspace = true
+
+[dependencies]
+clap = { version = "3.2.20", features = ["derive"] }
+num = "0.4.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

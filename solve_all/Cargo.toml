@@ -1,13 +1,14 @@
 [package]
 name = "solve_all"
 version = "0.1.0"
+description = "Solves all possible Countdown numbers games"
 edition.workspace = true
 authors.workspace = true
 
 [dependencies]
 cards = { path = "../cards" }
 numformat = { path = "../numformat" }
-programs = { path = "../programs" }
+solver = { path = "../solver" }
 clap = { version = "3.2.20", features = ["derive"] }
 itertools = "0.10.3"
 num_cpus = "1.13.1"

@@ -4,29 +4,25 @@
 
 mod duplicates;
 mod generate;
+mod infix;
+mod progop;
+mod solution;
 
 use std::cmp::max;
-use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use colored::Colorize;
 use itertools::Itertools;
 
-use crate::infix::*;
-use crate::progop::*;
-use duplicates::*;
-use generate::*;
-use numformat::*;
+use duplicates::{duplicated, DupReason};
+use generate::{calc_num_programs, generate_num_programs, op_combs, op_counts};
+use infix::{infix_group, InfixGrpTypeElem};
+use numformat::NumFormat;
+use progop::ProgOp;
 
-/// Holds instruction element numbers for each program
-pub(crate) struct ProgInstr {
-    /// Start element of the instructions vector
-    pub start: u32,
-    /// End element of the instructions vector
-    pub end: u32,
-}
+pub use solution::Solution;
 
-/// Collection of RPN program to run for a set of numbers
+/// Collection of RPN programs to run for a set of numbers
 pub struct Programs {
     programs: Vec<ProgInstr>,
     instructions: Vec<ProgOp>,
@@ -46,8 +42,8 @@ impl Programs {
         Self::new_with_operators(nums, inc_duplicated, operators, verbose)
     }
 
-    /// Create a new Programs struct with a given set of valid operators
-    fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>, verbose: bool) -> Self {
+    /// Create a new Programs struct with a given set of operators
+    pub fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>, verbose: bool) -> Self {
         // Calculate number permutations (=nums!)
         let num_perms: Vec<_> = (0..nums).permutations(nums as usize).collect();
 
@@ -62,14 +58,19 @@ impl Programs {
             println!("Operator placement counts and combinations for number of numbers:")
         }
 
+        // Loop for the number of numbers in the RPN program
         for num_cnt in 1..=nums {
+            // Generate operator count combinations for each operator slot
             let op_count = op_counts(num_cnt);
+
+            // Generte operator combination
             let op_comb = op_combs(num_cnt, &operators);
 
             if verbose {
                 println!("  {}: {:>6} {:>6}", num_cnt, op_count.len().num_format(), op_comb.len().num_format());
             }
 
+            // Add to the hash map
             assert!(op_map.insert(num_cnt, (op_count, op_comb)).is_none());
         }
 
@@ -84,6 +85,7 @@ impl Programs {
         // Vector to hold duplicate count
         let mut dups = Vec::with_capacity(nums as usize);
 
+        // Loop for the number of numbers in the RPN program
         for num_cnt in 1..=nums {
             // Generate programs
             dups.push(generate_num_programs(
@@ -97,6 +99,7 @@ impl Programs {
         }
 
         if verbose {
+            // Output some stats on the program generation
             if !inc_duplicated {
                 println!("Duplicate programs filtered by number of numbers:");
 
@@ -145,22 +148,23 @@ impl Programs {
 
     /// Runs one of the programs with a given set of numbers
     pub fn run(&self, prog_elem: usize, numbers: &[u8]) -> Result<u32, ProgErr> {
+        let instructions = self.instructions(prog_elem);
         let mut stack: Vec<u32> = Vec::with_capacity(self.nums as usize);
 
-        run_instructions(self.instructions(prog_elem), numbers, &mut stack)
+        Self::run_instructions(instructions, numbers, &mut stack)
     }
 
     /// Runs all of the programs in the programs collection with a given set of numbers and returns the results
     pub fn run_all(&self, numbers: &[u8]) -> Results {
         let mut stack: Vec<u32> = Vec::with_capacity(self.nums as usize);
-        let mut results = Results::new();
+        let mut results = Results::default();
 
         assert!(numbers.len() == self.nums as usize);
 
         for (i, program) in self.programs.iter().enumerate() {
             let instructions = self.instructions_for_program(program);
 
-            match run_instructions(instructions, numbers, &mut stack) {
+            match Self::run_instructions(instructions, numbers, &mut stack) {
                 Ok(ans) => {
                     if ans < 100 {
                         results.under_range += 1;
@@ -194,7 +198,7 @@ impl Programs {
         for (i, program) in self.programs.iter().enumerate() {
             let instructions = self.instructions_for_program(program);
 
-            if let Ok(ans) = run_instructions(instructions, numbers, &mut stack) {
+            if let Ok(ans) = Self::run_instructions(instructions, numbers, &mut stack) {
                 if ans == target {
                     solutions.push(Solution::new(i, instructions.len(), ans));
                 }
@@ -204,23 +208,13 @@ impl Programs {
         solutions
     }
 
-    /// Returns a slice of instructions for the program element
-    pub(crate) fn instructions(&self, prog_elem: usize) -> &[ProgOp] {
-        self.instructions_for_program(&self.programs[prog_elem])
-    }
-
-    #[inline]
-    fn instructions_for_program(&self, program: &ProgInstr) -> &[ProgOp] {
-        &self.instructions[program.start as usize..=program.end as usize]
-    }
-
     /// Returns the formatted steps of a program for a given set of numbers
     pub fn steps(&self, prog_elem: usize, numbers: &[u8], colour: bool) -> Vec<String> {
         let mut steps = Vec::new();
         let mut stack: Vec<(u32, String)> = Vec::with_capacity(numbers.len());
 
-        process_instructions(
-            self.instructions(prog_elem),
+        self.process_program_instructions(
+            prog_elem,
             &mut stack,
             |n| Some((numbers[n as usize] as u32, ProgOp::new_number(n).colour(numbers, colour))),
             |(n2, s2), op, (n1, s1)| {
@@ -259,13 +253,14 @@ impl Programs {
     pub fn infix_full(&self, prog_elem: usize, numbers: &[u8], colour: bool) -> String {
         let mut stack: Vec<String> = Vec::with_capacity(numbers.len());
 
-        let infix = process_instructions(
-            self.instructions(prog_elem),
-            &mut stack,
-            |n| Some(ProgOp::new_number(n).colour(numbers, colour)),
-            |s2, op, s1| Some(format!("({} {} {})", s2, op.colour(numbers, colour), s1)),
-        )
-        .unwrap();
+        let infix = self
+            .process_program_instructions(
+                prog_elem,
+                &mut stack,
+                |n| Some(ProgOp::new_number(n).colour(numbers, colour)),
+                |s2, op, s1| Some(format!("({} {} {})", s2, op.colour(numbers, colour), s1)),
+            )
+            .unwrap();
 
         if infix.starts_with('(') {
             // Strip outer brackets
@@ -291,6 +286,140 @@ impl Programs {
         set: &mut HashSet<InfixGrpTypeElem>,
     ) -> bool {
         duplicated(self.instructions(prog_elem), stack, set) != DupReason::NotDup
+    }
+
+    // == Private functions ==
+
+    /// Returns a slice of instructions for the program element
+    #[inline]
+    pub(crate) fn instructions(&self, prog_elem: usize) -> &[ProgOp] {
+        self.instructions_for_program(&self.programs[prog_elem])
+    }
+
+    /// Returns a slice of instructions for the program instruction pointer struct
+    #[inline]
+    fn instructions_for_program(&self, program: &ProgInstr) -> &[ProgOp] {
+        &self.instructions[program.start as usize..=program.end as usize]
+    }
+
+    /// Runs the program with a given set of numbers and preallocated stack
+    #[inline]
+    fn run_instructions(instructions: &[ProgOp], numbers: &[u8], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
+        // NB this does not use the process function for speed
+        stack.clear();
+
+        for op in instructions {
+            match *op & ProgOp::PROG_OP_MASK {
+                ProgOp::PROG_OP_NUM => stack.push(numbers[op.bits() as usize] as u32),
+                ProgOp::PROG_OP_ADD => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+
+                    stack.push(n2 + n1);
+                }
+                ProgOp::PROG_OP_SUB => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+
+                    if n2 < n1 {
+                        Err(ProgErr::Negative)?
+                    }
+
+                    let int = n2 - n1;
+
+                    if int == 0 {
+                        Err(ProgErr::Zero)?
+                    }
+
+                    stack.push(int);
+                }
+                ProgOp::PROG_OP_MUL => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+
+                    if n1 == 1 || n2 == 1 {
+                        Err(ProgErr::Mul1)?
+                    }
+
+                    let int = n2 * n1;
+
+                    if int == 0 {
+                        Err(ProgErr::Zero)?
+                    }
+
+                    stack.push(int);
+                }
+                ProgOp::PROG_OP_DIV => {
+                    let n1 = stack.pop().unwrap();
+                    let n2 = stack.pop().unwrap();
+
+                    if n1 == 0 {
+                        Err(ProgErr::DivZero)?
+                    }
+
+                    if n1 == 1 {
+                        Err(ProgErr::Div1)?
+                    }
+
+                    if n2 % n1 != 0 {
+                        Err(ProgErr::NonInteger)?
+                    }
+
+                    stack.push(n2 / n1);
+                }
+                _ => panic!("Unexpected operator type"),
+            }
+        }
+
+        Ok(stack.pop().unwrap())
+    }
+
+    /// Processes a set of instructions for a program element calling callbacks for numbers and operations
+    #[inline]
+    fn process_program_instructions<S, N, T>(
+        &self,
+        prog_elem: usize,
+        stack: &mut Vec<S>,
+        num_cb: N,
+        op_cb: T,
+    ) -> Option<S>
+    where
+        N: FnMut(u8) -> Option<S>,
+        T: FnMut(S, ProgOp, S) -> Option<S>,
+    {
+        Self::process_instructions(
+            self.instructions(prog_elem),
+            stack,
+            num_cb,
+            op_cb
+        )
+    }
+
+    /// Processes a set of instructions calling callbacks for numbers and operations
+    #[inline]
+    pub(crate) fn process_instructions<S, N, T>(
+        instructions: &[ProgOp],
+        stack: &mut Vec<S>,
+        mut num_cb: N,
+        mut op_cb: T,
+    ) -> Option<S>
+    where
+        N: FnMut(u8) -> Option<S>,
+        T: FnMut(S, ProgOp, S) -> Option<S>,
+    {
+        stack.clear();
+
+        for op in instructions {
+            if op.is_number() {
+                stack.push(num_cb(op.bits())?)
+            } else {
+                let n1 = stack.pop().unwrap();
+                let n2 = stack.pop().unwrap();
+                stack.push(op_cb(n2, *op, n1)?)
+            }
+        }
+
+        stack.pop()
     }
 }
 
@@ -330,6 +459,32 @@ impl From<&str> for Programs {
     }
 }
 
+/// Instruction element numbers for each program.
+/// Pointers are 32 bits to keep the size down
+pub(crate) struct ProgInstr {
+    /// Start element of the instructions vector
+    pub start: u32,
+    /// End element of the instructions vector
+    pub end: u32,
+}
+
+/// Errors generated by program run
+#[derive(Debug, Eq, PartialEq)]
+pub enum ProgErr {
+    /// Program generated a zero intermediate result
+    Zero,
+    /// Program generated a negative intermediate result
+    Negative,
+    /// Program encountered a division by zero
+    DivZero,
+    /// Program encountered a non-integer intermediate result
+    NonInteger,
+    /// Program encountered multiply by 1 (noop)
+    Mul1,
+    /// Program encountered divide by 1 (noop)
+    Div1,
+}
+
 /// Holds the results of running all programs with a set of numbers
 #[derive(Default)]
 pub struct Results {
@@ -351,63 +506,6 @@ pub struct Results {
     pub mult_by_1: usize,
     /// Number of programs containing a divide by 1
     pub div_by_1: usize,
-}
-
-impl Results {
-    /// Create new Result
-    fn new() -> Self {
-        Results::default()
-    }
-}
-
-/// Holds the result of running a program
-#[derive(Eq)]
-pub struct Solution {
-    /// Pointer to the program providing the solution
-    pub program: usize,
-    /// Length of the program
-    length: usize,
-    /// The result of running the program with the given numbers
-    pub result: u32,
-}
-
-impl Solution {
-    /// Creates a new Solution struct
-    fn new(program: usize, length: usize, result: u32) -> Self {
-        Solution {
-            program,
-            length,
-            result,
-        }
-    }
-}
-
-impl Ord for Solution {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let mut ord = self.result.cmp(&other.result);
-
-        if ord == Ordering::Equal {
-            ord = self.length.cmp(&other.length);
-
-            if ord == Ordering::Equal {
-                ord = self.program.cmp(&other.program)
-            }
-        }
-
-        ord
-    }
-}
-
-impl PartialOrd for Solution {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for Solution {
-    fn eq(&self, other: &Self) -> bool {
-        self.program == other.program
-    }
 }
 
 // Tests

@@ -12,10 +12,11 @@
 //! [0, 0, 3], [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 1, 1]
 
 use std::cmp::min;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use crate::progop::*;
-use crate::programs::*;
+use super::duplicates::{duplicated, DupReason};
+use super::progop::ProgOp;
+use super::ProgInstr;
 
 /// Calculates the number of programs that will be generated for a given number of numbers.
 /// When duplicates are filtered out an estimate is returned
@@ -85,7 +86,7 @@ pub(crate) fn generate_num_programs(
         // Duplicate check
         let ok = if !inc_duplicated {
             let reason = duplicated(&instructions[inst_start..=inst_end], &mut stack, &mut set);
-            
+
             match reason {
                 DupReason::NotDup => true,
                 DupReason::TermOrder => {

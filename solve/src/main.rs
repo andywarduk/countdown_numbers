@@ -4,8 +4,8 @@ use std::process;
 use bitflags::bitflags;
 use clap::Parser;
 
-use numformat::*;
-use programs::programs::*;
+use numformat::NumFormat;
+use solver::{Programs, Solution};
 
 fn main() {
     // Parse command line arguments
@@ -136,7 +136,7 @@ bitflags! {
 }
 
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[clap(author, version, about)]
 struct Args {
     /// Include duplicated equations
     #[clap(short = 'd', long = "duplicates", action)]
@@ -191,12 +191,15 @@ fn parse_args() -> Result<Args, i32> {
     if args.infix {
         args.output |= Output::INFIX
     };
+
     if args.full_infix {
         args.output |= Output::FULLINFIX
     };
+
     if args.rpn {
         args.output |= Output::RPN
     };
+
     if args.steps {
         args.output |= Output::STEPS
     };
