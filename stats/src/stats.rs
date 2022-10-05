@@ -15,6 +15,8 @@ pub struct Stats {
     pub sol_25_bucket: Vec<usize>,
     pub sol_50_bucket: Vec<usize>,
     pub sol_100_bucket: Vec<usize>,
+    pub tot_combs: usize,
+    pub tot_combs_reached: usize,
 }
 
 impl Stats {
@@ -71,6 +73,9 @@ impl Stats {
             let max_sols = self.max_sols.as_mut().unwrap();
             max_sols.push(cards.to_vec());
         }
+
+        self.tot_combs += 900;
+        self.tot_combs_reached += sols;
     }
 
     pub fn output(&self, desc: &str) {
@@ -177,6 +182,8 @@ impl Stats {
         }
 
         println!("Card Combinations, {}", self.files);
+        println!("Card/Target combinations, {}", self.tot_combs);
+        println!("Card/Target combinations reached, {}, {}", self.tot_combs_reached, percent(self.tot_combs_reached, self.tot_combs));
     }
 }
 
@@ -193,6 +200,8 @@ impl Default for Stats {
             sol_25_bucket: vec![0; TARGET_COUNT / 25],
             sol_50_bucket: vec![0; TARGET_COUNT / 50],
             sol_100_bucket: vec![0; TARGET_COUNT / 100],
+            tot_combs: 0,
+            tot_combs_reached: 0,
         }
     }
 }

@@ -977,6 +977,8 @@ Average Target Achieved, 820.96, 91.22%
 Min Solutions, 0, 0.00%, Count, 1, Cards, [[3, 3, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 1226
 Card Combinations, 13243
+Card/Target combinations, 11918700
+Card/Target combinations reached, 10871986, 91.22%
 
 Big Number Average Achieved
 0, 2850, 690.03, 76.67%
@@ -1964,6 +1966,8 @@ Average Target Achieved, 690.03, 76.67%
 Min Solutions, 0, 0.00%, Count, 1, Cards, [[3, 3, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 5, Cards, [[10, 9, 8, 8, 7, 6], [10, 9, 8, 7, 5, 2], [10, 9, 8, 7, 6, 5], [10, 10, 9, 8, 7, 6], [10, 9, 8, 7, 4, 3]]
 Card Combinations, 2850
+Card/Target combinations, 2565000
+Card/Target combinations reached, 1966573, 76.67%
 
 ===== 1 Big Numbers =====
 Target, Combinations
@@ -2944,6 +2948,8 @@ Average Target Achieved, 856.04, 95.12%
 Min Solutions, 247, 27.44%, Count, 1, Cards, [[25, 3, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 614
 Card Combinations, 5808
+Card/Target combinations, 5227200
+Card/Target combinations reached, 4971884, 95.12%
 
 ===== 2 Big Numbers =====
 Target, Combinations
@@ -3924,6 +3930,8 @@ Average Target Achieved, 866.07, 96.23%
 Min Solutions, 279, 31.00%, Count, 1, Cards, [[100, 50, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 603
 Card Combinations, 3690
+Card/Target combinations, 3321000
+Card/Target combinations reached, 3195793, 96.23%
 
 ===== 3 Big Numbers =====
 Target, Combinations
@@ -4904,6 +4912,8 @@ Average Target Achieved, 826.16, 91.80%
 Min Solutions, 228, 25.33%, Count, 1, Cards, [[100, 75, 50, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 4, Cards, [[100, 75, 25, 9, 8, 6], [100, 50, 25, 10, 7, 6], [100, 75, 50, 9, 8, 2], [100, 75, 25, 9, 8, 2]]
 Card Combinations, 840
+Card/Target combinations, 756000
+Card/Target combinations reached, 693971, 91.80%
 
 ===== 4 Big Numbers =====
 Target, Combinations
@@ -5884,3 +5894,5 @@ Average Target Achieved, 795.73, 88.41%
 Min Solutions, 325, 36.11%, Count, 1, Cards, [[100, 75, 50, 25, 1, 1]]
 Max Solutions, 886, 98.44%, Count, 1, Cards, [[100, 75, 50, 25, 9, 8]]
 Card Combinations, 55
+Card/Target combinations, 49500
+Card/Target combinations reached, 43765, 88.41%

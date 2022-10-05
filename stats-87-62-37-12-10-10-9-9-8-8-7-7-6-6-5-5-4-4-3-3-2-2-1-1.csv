@@ -977,6 +977,8 @@ Average Target Achieved, 825.95, 91.77%
 Min Solutions, 0, 0.00%, Count, 1, Cards, [[3, 3, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 1802
 Card Combinations, 13243
+Card/Target combinations, 11918700
+Card/Target combinations reached, 10938048, 91.77%
 
 Big Number Average Achieved
 0, 2850, 690.03, 76.67%
@@ -1964,6 +1966,8 @@ Average Target Achieved, 690.03, 76.67%
 Min Solutions, 0, 0.00%, Count, 1, Cards, [[3, 3, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 5, Cards, [[10, 9, 8, 8, 7, 6], [10, 9, 8, 7, 5, 2], [10, 9, 8, 7, 6, 5], [10, 10, 9, 8, 7, 6], [10, 9, 8, 7, 4, 3]]
 Card Combinations, 2850
+Card/Target combinations, 2565000
+Card/Target combinations reached, 1966573, 76.67%
 
 ===== 1 Big Numbers =====
 Target, Combinations
@@ -2944,6 +2948,8 @@ Average Target Achieved, 845.80, 93.98%
 Min Solutions, 108, 12.00%, Count, 1, Cards, [[12, 3, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 477
 Card Combinations, 5808
+Card/Target combinations, 5227200
+Card/Target combinations reached, 4912407, 93.98%
 
 ===== 2 Big Numbers =====
 Target, Combinations
@@ -3924,6 +3930,8 @@ Average Target Achieved, 883.69, 98.19%
 Min Solutions, 375, 41.67%, Count, 1, Cards, [[62, 37, 2, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 939
 Card Combinations, 3690
+Card/Target combinations, 3321000
+Card/Target combinations reached, 3260828, 98.19%
 
 ===== 3 Big Numbers =====
 Target, Combinations
@@ -4904,6 +4912,8 @@ Average Target Achieved, 891.95, 99.11%
 Min Solutions, 471, 52.33%, Count, 1, Cards, [[87, 62, 37, 2, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 357
 Card Combinations, 840
+Card/Target combinations, 756000
+Card/Target combinations reached, 749241, 99.11%
 
 ===== 4 Big Numbers =====
 Target, Combinations
@@ -5884,3 +5894,5 @@ Average Target Achieved, 890.89, 98.99%
 Min Solutions, 635, 70.56%, Count, 1, Cards, [[87, 62, 37, 12, 1, 1]]
 Max Solutions, 900, 100.00%, Count, 24
 Card Combinations, 55
+Card/Target combinations, 49500
+Card/Target combinations reached, 48999, 98.99%
