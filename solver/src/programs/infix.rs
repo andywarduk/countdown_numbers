@@ -99,7 +99,9 @@ where
         let mut grp = Vec::with_capacity(inst_cnt);
 
         match t1 {
-            InfixGrpTypeElem::Group(mut t1_terms) if t1_terms[0].0 == op || t1_terms[0].0 == other_op => {
+            InfixGrpTypeElem::Group(mut t1_terms)
+                if t1_terms[0].0 == op || t1_terms[0].0 == other_op =>
+            {
                 // Group with compatible operator (ie + and - or * and /)
                 t1_terms[0].0 = op;
                 grp.append(&mut t1_terms);
@@ -117,7 +119,9 @@ where
 
         if inc_right {
             match t2 {
-                InfixGrpTypeElem::Group(mut t2_terms) if t2_terms[0].0 == other_op || t2_terms[0].0 == op => {
+                InfixGrpTypeElem::Group(mut t2_terms)
+                    if t2_terms[0].0 == other_op || t2_terms[0].0 == op =>
+                {
                     // Group with compatible operator (ie + and - or * and /)
                     t2_terms[0].0 = op;
                     grp.append(&mut t2_terms)
@@ -196,14 +200,23 @@ mod tests {
     fn test_rpn_infix(rpn: &str, exp_infix: &str) {
         let programs: Programs = rpn.into();
 
-        let num_count = programs.instructions(0).iter().filter(|i| i.is_number()).count();
+        let num_count = programs
+            .instructions(0)
+            .iter()
+            .filter(|i| i.is_number())
+            .count();
 
         let numbers = (0..num_count).map(|i| i as u8).collect::<Vec<_>>();
 
         test_program_infix(&programs, exp_infix, &numbers);
     }
 
-    fn test_rpn_infix_and_result(rpn: &str, exp_infix: &str, numbers: &[u8], exp_ans: Result<u32, ProgErr>) {
+    fn test_rpn_infix_and_result(
+        rpn: &str,
+        exp_infix: &str,
+        numbers: &[u8],
+        exp_ans: Result<u32, ProgErr>,
+    ) {
         let programs: Programs = rpn.into();
 
         test_program_infix(&programs, exp_infix, numbers);

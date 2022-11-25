@@ -12,14 +12,12 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 
 use colored::Colorize;
-use itertools::Itertools;
-
 use duplicates::{duplicated, DupReason};
 use generate::{calc_num_programs, generate_num_programs, op_combs, op_counts};
 use infix::{infix_group, InfixGrpTypeElem};
+use itertools::Itertools;
 use numformat::NumFormat;
 use progop::ProgOp;
-
 pub use solution::Solution;
 
 /// Collection of RPN programs to run for a set of numbers
@@ -43,7 +41,12 @@ impl Programs {
     }
 
     /// Create a new Programs struct with a given set of operators
-    pub fn new_with_operators(nums: u8, inc_duplicated: bool, operators: Vec<ProgOp>, verbose: bool) -> Self {
+    pub fn new_with_operators(
+        nums: u8,
+        inc_duplicated: bool,
+        operators: Vec<ProgOp>,
+        verbose: bool,
+    ) -> Self {
         // Calculate number permutations (=nums!)
         let num_perms: Vec<_> = (0..nums).permutations(nums as usize).collect();
 
@@ -117,7 +120,9 @@ impl Programs {
                     );
                 }
 
-                let (tterms, tinfix) = dups.iter().fold((0, 0), |(tt, ti), (t, i)| (tt + *t, ti + *i));
+                let (tterms, tinfix) = dups
+                    .iter()
+                    .fold((0, 0), |(tt, ti), (t, i)| (tt + *t, ti + *i));
 
                 println!(
                     "  Total: terms {:>10}  infix {:>10}",
@@ -181,7 +186,9 @@ impl Programs {
                     } else if ans > 999 {
                         results.above_range += 1;
                     } else {
-                        results.solutions.push(Solution::new(i, instructions.len(), ans));
+                        results
+                            .solutions
+                            .push(Solution::new(i, instructions.len(), ans));
                     }
                 }
                 Err(e) => match e {
@@ -326,7 +333,11 @@ impl Programs {
 
     /// Runs the program with a given set of numbers and preallocated stack
     #[inline]
-    fn run_instructions(instructions: &[ProgOp], numbers: &[u8], stack: &mut Vec<u32>) -> Result<u32, ProgErr> {
+    fn run_instructions(
+        instructions: &[ProgOp],
+        numbers: &[u8],
+        stack: &mut Vec<u32>,
+    ) -> Result<u32, ProgErr> {
         // NB this does not use the process function for speed
         stack.clear();
 
@@ -464,9 +475,13 @@ impl From<&str> for Programs {
         }];
 
         // Work out the maximum number present in the program
-        let nums = instructions
-            .iter()
-            .fold(0, |max_n, i| if i.is_number() { max(max_n, i.bits()) } else { max_n });
+        let nums = instructions.iter().fold(0, |max_n, i| {
+            if i.is_number() {
+                max(max_n, i.bits())
+            } else {
+                max_n
+            }
+        });
 
         Programs {
             programs,
@@ -529,8 +544,9 @@ pub struct Results {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::mem;
+
+    use super::*;
 
     #[test]
     fn test_size() {

@@ -3,7 +3,6 @@ use std::process;
 
 use bitflags::bitflags;
 use clap::Parser;
-
 use numformat::NumFormat;
 use solver::{Programs, Solution};
 
@@ -66,7 +65,11 @@ fn main() {
                 println!(
                     "{} {} found",
                     solutions.len(),
-                    if solutions.len() == 1 { "solution" } else { "solutions" }
+                    if solutions.len() == 1 {
+                        "solution"
+                    } else {
+                        "solutions"
+                    }
                 );
 
                 // Sort solutions by shortest first

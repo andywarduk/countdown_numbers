@@ -87,13 +87,20 @@ pub(crate) fn duplicated(
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
+
     use super::*;
     use crate::programs::infix::{infix_group, infix_group_cb};
     use crate::programs::Programs;
 
-    use itertools::Itertools;
-
-    fn test_int(rpn: &str, numbers: &[u8], exp_infix: &str, exp_ans: u32, exp_grps: usize, exp_dup: DupReason) {
+    fn test_int(
+        rpn: &str,
+        numbers: &[u8],
+        exp_infix: &str,
+        exp_ans: u32,
+        exp_grps: usize,
+        exp_dup: DupReason,
+    ) {
         // Create program
         let programs: Programs = rpn.into();
 
@@ -150,28 +157,126 @@ mod tests {
         test_int("0 1 +", &[10, 20], "10 + 20", 30, 1, DupReason::NotDup);
         test_int("1 0 +", &[10, 20], "20 + 10", 30, 1, DupReason::TermOrder);
 
-        test_int("0 1 + 2 +", &[10, 20, 30], "10 + 20 + 30", 60, 1, DupReason::NotDup);
-        test_int("0 2 + 1 +", &[10, 20, 30], "10 + 30 + 20", 60, 1, DupReason::TermOrder);
-        test_int("1 0 + 2 +", &[10, 20, 30], "20 + 10 + 30", 60, 1, DupReason::TermOrder);
-        test_int("1 2 + 0 +", &[10, 20, 30], "20 + 30 + 10", 60, 1, DupReason::TermOrder);
-        test_int("2 0 + 1 +", &[10, 20, 30], "30 + 10 + 20", 60, 1, DupReason::TermOrder);
-        test_int("2 1 + 0 +", &[10, 20, 30], "30 + 20 + 10", 60, 1, DupReason::TermOrder);
+        test_int(
+            "0 1 + 2 +",
+            &[10, 20, 30],
+            "10 + 20 + 30",
+            60,
+            1,
+            DupReason::NotDup,
+        );
+        test_int(
+            "0 2 + 1 +",
+            &[10, 20, 30],
+            "10 + 30 + 20",
+            60,
+            1,
+            DupReason::TermOrder,
+        );
+        test_int(
+            "1 0 + 2 +",
+            &[10, 20, 30],
+            "20 + 10 + 30",
+            60,
+            1,
+            DupReason::TermOrder,
+        );
+        test_int(
+            "1 2 + 0 +",
+            &[10, 20, 30],
+            "20 + 30 + 10",
+            60,
+            1,
+            DupReason::TermOrder,
+        );
+        test_int(
+            "2 0 + 1 +",
+            &[10, 20, 30],
+            "30 + 10 + 20",
+            60,
+            1,
+            DupReason::TermOrder,
+        );
+        test_int(
+            "2 1 + 0 +",
+            &[10, 20, 30],
+            "30 + 20 + 10",
+            60,
+            1,
+            DupReason::TermOrder,
+        );
 
         test_int("0 1 -", &[20, 15], "20 - 15", 5, 1, DupReason::NotDup);
         test_int("1 0 -", &[30, 50], "50 - 30", 20, 1, DupReason::NotDup);
 
-        test_int("0 1 - 2 -", &[50, 10, 20], "50 - 10 - 20", 20, 1, DupReason::NotDup);
-        test_int("0 2 - 1 -", &[50, 10, 20], "50 - 20 - 10", 20, 1, DupReason::TermOrder);
-        test_int("1 0 - 2 -", &[10, 50, 20], "50 - 10 - 20", 20, 1, DupReason::NotDup);
-        test_int("1 2 - 0 -", &[10, 50, 20], "50 - 20 - 10", 20, 1, DupReason::TermOrder);
-        test_int("2 0 - 1 -", &[10, 20, 50], "50 - 10 - 20", 20, 1, DupReason::NotDup);
-        test_int("2 1 - 0 -", &[10, 20, 50], "50 - 20 - 10", 20, 1, DupReason::TermOrder);
+        test_int(
+            "0 1 - 2 -",
+            &[50, 10, 20],
+            "50 - 10 - 20",
+            20,
+            1,
+            DupReason::NotDup,
+        );
+        test_int(
+            "0 2 - 1 -",
+            &[50, 10, 20],
+            "50 - 20 - 10",
+            20,
+            1,
+            DupReason::TermOrder,
+        );
+        test_int(
+            "1 0 - 2 -",
+            &[10, 50, 20],
+            "50 - 10 - 20",
+            20,
+            1,
+            DupReason::NotDup,
+        );
+        test_int(
+            "1 2 - 0 -",
+            &[10, 50, 20],
+            "50 - 20 - 10",
+            20,
+            1,
+            DupReason::TermOrder,
+        );
+        test_int(
+            "2 0 - 1 -",
+            &[10, 20, 50],
+            "50 - 10 - 20",
+            20,
+            1,
+            DupReason::NotDup,
+        );
+        test_int(
+            "2 1 - 0 -",
+            &[10, 20, 50],
+            "50 - 20 - 10",
+            20,
+            1,
+            DupReason::TermOrder,
+        );
 
         // (0 - 1) + 2 == 0 - 1 + 2 == 1
-        test_int("2 1 - 0 +", &[5, 10, 30], "30 - 10 + 5", 25, 1, DupReason::TermOrder);
+        test_int(
+            "2 1 - 0 +",
+            &[5, 10, 30],
+            "30 - 10 + 5",
+            25,
+            1,
+            DupReason::TermOrder,
+        );
 
         // 0 - (1 + 2) == -3 != 0 - 1 + 2 == 1
-        test_int("0 1 2 + -", &[100, 10, 30], "100 - (10 + 30)", 60, 2, DupReason::NotDup);
+        test_int(
+            "0 1 2 + -",
+            &[100, 10, 30],
+            "100 - (10 + 30)",
+            60,
+            2,
+            DupReason::NotDup,
+        );
 
         // (0 + 1) + (2 + 3) == 0 + 1 + 2 + 3
         test_int(

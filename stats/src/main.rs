@@ -3,15 +3,11 @@ mod results;
 mod stats;
 
 use std::error::Error;
-use std::fs;
-use std::io;
 use std::io::BufRead;
-use std::path;
 use std::path::PathBuf;
-use std::process;
+use std::{fs, io, path, process};
 
 use clap::Parser;
-
 use results::*;
 use stats::*;
 
@@ -126,7 +122,14 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
                 sols += 1;
             }
             '.' | '\n' => (),
-            _ => return Err(format!("Invalid character '{}' found in {}", c, details.path.display()).into()),
+            _ => {
+                return Err(format!(
+                    "Invalid character '{}' found in {}",
+                    c,
+                    details.path.display()
+                )
+                .into())
+            }
         }
     }
 

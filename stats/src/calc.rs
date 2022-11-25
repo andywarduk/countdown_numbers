@@ -13,5 +13,8 @@ where
     N: ToPrimitive,
     T: ToPrimitive,
 {
-    format!("{:.2}%", (num.to_f64().unwrap() / total.to_f64().unwrap()) * 100_f64)
+    format!(
+        "{:.2}%",
+        (num.to_f64().unwrap() / total.to_f64().unwrap()) * 100_f64
+    )
 }

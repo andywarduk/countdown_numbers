@@ -1,16 +1,13 @@
 use std::collections::{HashSet, VecDeque};
-use std::fs;
 use std::fs::File;
-use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::thread;
-
-use clap::Parser;
-use itertools::Itertools;
+use std::{fs, io, thread};
 
 use cards::{get_default_cards, get_special_cards};
+use clap::Parser;
+use itertools::Itertools;
 use numformat::NumFormat;
 use solver::Programs;
 
@@ -231,7 +228,13 @@ fn run_solve_threads(args: &Args, card_combs: Arc<Mutex<VecDeque<Vec<u8>>>>, pro
     });
 }
 
-fn solve(args: &Args, programs: &Programs, numbers: &[u8], file_path: &PathBuf, eqn_file_path: &PathBuf) {
+fn solve(
+    args: &Args,
+    programs: &Programs,
+    numbers: &[u8],
+    file_path: &PathBuf,
+    eqn_file_path: &PathBuf,
+) {
     // Run all of the programs for this set of numbers
     let results = programs.run_all(numbers);
 
@@ -243,7 +246,10 @@ fn solve(args: &Args, programs: &Programs, numbers: &[u8], file_path: &PathBuf, 
     }
 
     // Create a solutions map string where '#' is > 0 and '.' = 0
-    let sol_map: String = sol_cnt.iter().map(|x| if *x > 0 { '#' } else { '.' }).collect();
+    let sol_map: String = sol_cnt
+        .iter()
+        .map(|x| if *x > 0 { '#' } else { '.' })
+        .collect();
 
     // Create a string listing all of the target numbers with the number of solutions
     let sol_cnt_str = sol_cnt
@@ -283,7 +289,12 @@ fn solve(args: &Args, programs: &Programs, numbers: &[u8], file_path: &PathBuf, 
         let mut eqn_file = File::create(eqn_file_path).unwrap();
 
         for solution in results.solutions.iter().sorted() {
-            writeln!(&mut eqn_file, "{}", programs.infix(solution.program, numbers, false)).unwrap();
+            writeln!(
+                &mut eqn_file,
+                "{}",
+                programs.infix(solution.program, numbers, false)
+            )
+            .unwrap();
         }
     }
 }
