@@ -122,11 +122,12 @@ fn create_out_dir(args: &mut Args) -> bool {
         let comm_str = if args.inc_duplicated { "C" } else { "NC" };
 
         args.out_dir = Some(
-            format!("solutions-{}-{}",
+            format!(
+                "solutions-{}-{}",
                 comm_str,
                 args.cards.iter().map(|c| c.to_string()).join("-")
             )
-            .into()
+            .into(),
         );
     };
 
@@ -242,9 +243,7 @@ fn solve(args: &Args, programs: &Programs, numbers: &[u8], file_path: &PathBuf, 
     }
 
     // Create a solutions map string where '#' is > 0 and '.' = 0
-    let sol_map: String = sol_cnt.iter().map(|x| {
-        if *x > 0 { '#' } else { '.' }
-    }).collect();
+    let sol_map: String = sol_cnt.iter().map(|x| if *x > 0 { '#' } else { '.' }).collect();
 
     // Create a string listing all of the target numbers with the number of solutions
     let sol_cnt_str = sol_cnt
@@ -272,7 +271,12 @@ fn solve(args: &Args, programs: &Programs, numbers: &[u8], file_path: &PathBuf, 
     writeln!(&mut file, "divide by 1: {}", results.div_by_1).unwrap();
     writeln!(&mut file, "< 100: {}", results.under_range).unwrap();
     writeln!(&mut file, "> 999: {}", results.above_range).unwrap();
-    writeln!(&mut file, "duplicates included: {}", if args.inc_duplicated { "Yes" } else { "No" }).unwrap();
+    writeln!(
+        &mut file,
+        "duplicates included: {}",
+        if args.inc_duplicated { "Yes" } else { "No" }
+    )
+    .unwrap();
 
     if args.output_equations {
         // Write all equations to the equation output file

@@ -57,10 +57,17 @@ fn main() {
                 });
 
                 if args.verbose {
-                    println!("Filtered out {} duplicate and {} identical solutions", duplicate, identical);
+                    println!(
+                        "Filtered out {} duplicate and {} identical solutions",
+                        duplicate, identical
+                    );
                 }
 
-                println!("{} {} found", solutions.len(), if solutions.len() == 1 { "solution" } else { "solutions" });
+                println!(
+                    "{} {} found",
+                    solutions.len(),
+                    if solutions.len() == 1 { "solution" } else { "solutions" }
+                );
 
                 // Sort solutions by shortest first
                 solutions.sort();

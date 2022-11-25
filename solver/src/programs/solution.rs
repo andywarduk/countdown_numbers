@@ -14,7 +14,11 @@ pub struct Solution {
 impl Solution {
     /// Creates a new solution
     pub fn new(program: usize, length: usize, result: u32) -> Self {
-        Self { program, length, result }
+        Self {
+            program,
+            length,
+            result,
+        }
     }
 }
 

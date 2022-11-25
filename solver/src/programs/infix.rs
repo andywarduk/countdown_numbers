@@ -37,7 +37,8 @@ impl InfixGrpTypeElem {
                 ProgOp::new_number(*n).colour(numbers, colour)
             }
             InfixGrpTypeElem::Term(t1, op, t2) => {
-                format!("{} {} {}",
+                format!(
+                    "{} {} {}",
                     t1.colour_internal(numbers, colour, true),
                     op.colour(numbers, colour),
                     t2.colour_internal(numbers, colour, true),
@@ -98,9 +99,7 @@ where
         let mut grp = Vec::with_capacity(inst_cnt);
 
         match t1 {
-            InfixGrpTypeElem::Group(mut t1_terms)
-                if t1_terms[0].0 == op || t1_terms[0].0 == other_op =>
-            {
+            InfixGrpTypeElem::Group(mut t1_terms) if t1_terms[0].0 == op || t1_terms[0].0 == other_op => {
                 // Group with compatible operator (ie + and - or * and /)
                 t1_terms[0].0 = op;
                 grp.append(&mut t1_terms);
@@ -118,9 +117,7 @@ where
 
         if inc_right {
             match t2 {
-                InfixGrpTypeElem::Group(mut t2_terms)
-                    if t2_terms[0].0 == other_op || t2_terms[0].0 == op =>
-                {
+                InfixGrpTypeElem::Group(mut t2_terms) if t2_terms[0].0 == other_op || t2_terms[0].0 == op => {
                     // Group with compatible operator (ie + and - or * and /)
                     t2_terms[0].0 = op;
                     grp.append(&mut t2_terms)
@@ -199,11 +196,7 @@ mod tests {
     fn test_rpn_infix(rpn: &str, exp_infix: &str) {
         let programs: Programs = rpn.into();
 
-        let num_count = programs
-            .instructions(0)
-            .iter()
-            .filter(|i| i.is_number())
-            .count();
+        let num_count = programs.instructions(0).iter().filter(|i| i.is_number()).count();
 
         let numbers = (0..num_count).map(|i| i as u8).collect::<Vec<_>>();
 
@@ -223,7 +216,11 @@ mod tests {
     fn test_program_infix(programs: &Programs, exp_infix: &str, numbers: &[u8]) {
         let infix = infix_group(programs.instructions(0));
 
-        println!("RPN: {}, infix: {}", programs.rpn(0, numbers, false), infix.colour(numbers, false));
+        println!(
+            "RPN: {}, infix: {}",
+            programs.rpn(0, numbers, false),
+            infix.colour(numbers, false)
+        );
 
         assert_eq!(exp_infix, infix.colour(numbers, false));
     }
@@ -281,16 +278,25 @@ mod tests {
     #[test]
     fn group_tests() {
         // 1 + (2 - ((0 + 3) / 4)) => 75 + (50 - ((100 + 25) / 5))
-        test_rpn_infix_and_result("1 2 0 3 + 4 / - +",
+        test_rpn_infix_and_result(
+            "1 2 0 3 + 4 / - +",
             "75 + 50 - ((100 + 25) / 5)",
-            &[100, 75, 50, 25, 5], Ok(100));
+            &[100, 75, 50, 25, 5],
+            Ok(100),
+        );
         // 0 * (((3 * 4) - 5) / (1 + 2)) => 100 * (((25 * 10) - 5) / (75 + 50)) = 196
-        test_rpn_infix_and_result("0 3 4 * 5 - 1 2 + / *",
+        test_rpn_infix_and_result(
+            "0 3 4 * 5 - 1 2 + / *",
             "100 × ((25 × 10) - 5) / (75 + 50)",
-            &[100, 75, 50, 25, 10, 5], Err(ProgErr::NonInteger));
+            &[100, 75, 50, 25, 10, 5],
+            Err(ProgErr::NonInteger),
+        );
         // 0 * ((3 * 4) - 5) / (1 + 2) => 100 * ((25 * 10) - 5) / (75 + 50) = 196
-        test_rpn_infix_and_result("0 3 4 * 5 - * 1 2 + /",
+        test_rpn_infix_and_result(
+            "0 3 4 * 5 - * 1 2 + /",
             "100 × ((25 × 10) - 5) / (75 + 50)",
-            &[100, 75, 50, 25, 10, 5], Ok(196));
+            &[100, 75, 50, 25, 10, 5],
+            Ok(196),
+        );
     }
 }

@@ -121,7 +121,8 @@ impl Stats {
             for (i, n) in buckets.iter().enumerate() {
                 cumul += n;
 
-                println!("{}-{}, {}, {}, {}, {}",
+                println!(
+                    "{}-{}, {}, {}, {}, {}",
                     (i * size) + 1,
                     (i + 1) * size,
                     n,
@@ -146,7 +147,12 @@ impl Stats {
             .collect::<Vec<String>>()
             .join(", ");
 
-        println!("Min Target Achieved, {}, {}, Targets, {}", min_sols, percent(min_sols, self.files), elems);
+        println!(
+            "Min Target Achieved, {}, {}, Targets, {}",
+            min_sols,
+            percent(min_sols, self.files),
+            elems
+        );
 
         let elems = max_sol_elems
             .iter()
@@ -154,15 +160,29 @@ impl Stats {
             .collect::<Vec<String>>()
             .join(", ");
 
-        println!("Max Target Achieved, {}, {}, Targets, {}", max_sols, percent(max_sols, self.files), elems);
+        println!(
+            "Max Target Achieved, {}, {}, Targets, {}",
+            max_sols,
+            percent(max_sols, self.files),
+            elems
+        );
 
         let avg_achieved = average(self.tot_sols, self.files);
-        println!("Average Target Achieved, {:.2}, {}", avg_achieved, percent(avg_achieved, 900));
+        println!(
+            "Average Target Achieved, {:.2}, {}",
+            avg_achieved,
+            percent(avg_achieved, 900)
+        );
 
         // Minimum solutions
         let sols = self.min_sols.as_ref().unwrap();
         let count = sols.len();
-        print!("Min Solutions, {}, {}, Count, {}", self.min_sol_cnt, percent(self.min_sol_cnt, 900), count);
+        print!(
+            "Min Solutions, {}, {}, Count, {}",
+            self.min_sol_cnt,
+            percent(self.min_sol_cnt, 900),
+            count
+        );
 
         if count <= 5 {
             println!(", Cards, {:?}", sols);
@@ -173,7 +193,12 @@ impl Stats {
         // Maximum solutions
         let sols = self.max_sols.as_ref().unwrap();
         let count = sols.len();
-        print!("Max Solutions, {}, {}, Count, {}", self.max_sol_cnt, percent(self.max_sol_cnt, 900), count);
+        print!(
+            "Max Solutions, {}, {}, Count, {}",
+            self.max_sol_cnt,
+            percent(self.max_sol_cnt, 900),
+            count
+        );
 
         if count <= 5 {
             println!(", Cards, {:?}", sols);
@@ -183,7 +208,11 @@ impl Stats {
 
         println!("Card Combinations, {}", self.files);
         println!("Card/Target combinations, {}", self.tot_combs);
-        println!("Card/Target combinations reached, {}, {}", self.tot_combs_reached, percent(self.tot_combs_reached, self.tot_combs));
+        println!(
+            "Card/Target combinations reached, {}, {}",
+            self.tot_combs_reached,
+            percent(self.tot_combs_reached, self.tot_combs)
+        );
     }
 }
 

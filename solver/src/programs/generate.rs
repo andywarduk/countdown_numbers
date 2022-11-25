@@ -160,9 +160,7 @@ pub(crate) fn op_counts(nums: u8) -> OpCounts {
         }
     };
 
-    let catalan_number = |n: usize| -> usize {
-        factorial(2 * n) / (factorial(n + 1) * factorial(n))
-    };
+    let catalan_number = |n: usize| -> usize { factorial(2 * n) / (factorial(n + 1) * factorial(n)) };
 
     let size = catalan_number(nums as usize - 1);
     let mut results = Vec::with_capacity(size);
@@ -181,14 +179,7 @@ pub(crate) fn op_counts(nums: u8) -> OpCounts {
     results
 }
 
-fn op_counts_rec(
-    results: &mut OpCounts,
-    mut current: Vec<u8>,
-    slot: u8,
-    slots: u8,
-    to_alloc: u8,
-    stacked: u8,
-) {
+fn op_counts_rec(results: &mut OpCounts, mut current: Vec<u8>, slot: u8, slots: u8, to_alloc: u8, stacked: u8) {
     if slot == slots - 1 {
         // Allocate all to the last slot
         current.push(to_alloc);

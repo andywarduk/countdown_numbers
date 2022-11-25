@@ -67,7 +67,12 @@ impl Programs {
             let op_comb = op_combs(num_cnt, &operators);
 
             if verbose {
-                println!("  {}: {:>6} {:>6}", num_cnt, op_count.len().num_format(), op_comb.len().num_format());
+                println!(
+                    "  {}: {:>6} {:>6}",
+                    num_cnt,
+                    op_count.len().num_format(),
+                    op_comb.len().num_format()
+                );
             }
 
             // Add to the hash map
@@ -104,22 +109,31 @@ impl Programs {
                 println!("Duplicate programs filtered by number of numbers:");
 
                 for (i, (term_dups, infix_dups)) in dups.iter().enumerate() {
-                    println!("  {:>5}: terms {:>10}  infix {:>10}", i + 1, term_dups.num_format(), infix_dups.num_format());
+                    println!(
+                        "  {:>5}: terms {:>10}  infix {:>10}",
+                        i + 1,
+                        term_dups.num_format(),
+                        infix_dups.num_format()
+                    );
                 }
 
-                let (tterms, tinfix) = dups
-                    .iter()
-                    .fold((0, 0), |(tt, ti), (t, i)| (tt + *t, ti + *i));
+                let (tterms, tinfix) = dups.iter().fold((0, 0), |(tt, ti), (t, i)| (tt + *t, ti + *i));
 
-                println!("  Total: terms {:>10}  infix {:>10}", tterms.num_format(), tinfix.num_format());
+                println!(
+                    "  Total: terms {:>10}  infix {:>10}",
+                    tterms.num_format(),
+                    tinfix.num_format()
+                );
             }
 
-            println!("{} programs generated (guessed {})",
+            println!(
+                "{} programs generated (guessed {})",
                 program_vec.len().num_format(),
                 prog_cnt_guess.num_format(),
             );
 
-            println!("{} total instructions (guessed {})",
+            println!(
+                "{} total instructions (guessed {})",
                 instruction_vec.len().num_format(),
                 ins_cnt_guess.num_format(),
             );
@@ -177,7 +191,7 @@ impl Programs {
                     ProgErr::NonInteger => results.non_integer += 1,
                     ProgErr::Mul1 => results.mult_by_1 += 1,
                     ProgErr::Div1 => results.div_by_1 += 1,
-                }
+                },
             }
         }
 
@@ -212,7 +226,12 @@ impl Programs {
         self.process_program_instructions(
             prog_elem,
             &mut stack,
-            |n| Some((numbers[n as usize] as u32, ProgOp::new_number(n).colour(numbers, colour))),
+            |n| {
+                Some((
+                    numbers[n as usize] as u32,
+                    ProgOp::new_number(n).colour(numbers, colour),
+                ))
+            },
             |(n2, s2), op, (n1, s1)| {
                 let ans = match op & ProgOp::PROG_OP_MASK {
                     ProgOp::PROG_OP_ADD => n2 + n1,
@@ -230,7 +249,14 @@ impl Programs {
                     "=".to_string()
                 };
 
-                steps.push(format!("{} {} {} {} {}", s2, op.colour(numbers, colour), s1, equals, ans_str));
+                steps.push(format!(
+                    "{} {} {} {} {}",
+                    s2,
+                    op.colour(numbers, colour),
+                    s1,
+                    equals,
+                    ans_str
+                ));
 
                 Some((ans, ans_str))
             },
@@ -383,12 +409,7 @@ impl Programs {
         N: FnMut(u8) -> Option<S>,
         T: FnMut(S, ProgOp, S) -> Option<S>,
     {
-        Self::process_instructions(
-            self.instructions(prog_elem),
-            stack,
-            num_cb,
-            op_cb
-        )
+        Self::process_instructions(self.instructions(prog_elem), stack, num_cb, op_cb)
     }
 
     /// Processes a set of instructions calling callbacks for numbers and operations
