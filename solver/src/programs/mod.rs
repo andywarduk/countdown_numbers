@@ -125,10 +125,6 @@ impl Programs {
             );
         }
 
-        // Shrink vectors
-        program_vec.shrink_to_fit();
-        instruction_vec.shrink_to_fit();
-
         Programs {
             programs: program_vec,
             instructions: instruction_vec,
