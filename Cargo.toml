@@ -3,15 +3,7 @@ edition = "2021"
 authors = ["Andrew Ward (andy.ward.uk@gmail.com)"]
 
 [workspace]
-members = [
-    "cards",
-    "solver",
-    "solve",
-    "solve_all",
-    "stats",
-    "numformat",
-]
+members = ["cards", "solver", "solve", "solve_all", "stats", "numformat"]
 
 [profile.release]
-debug = true
 lto = true
