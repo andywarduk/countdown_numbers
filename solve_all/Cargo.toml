@@ -9,7 +9,7 @@ authors.workspace = true
 cards = { path = "../cards" }
 numformat = { path = "../numformat" }
 solver = { path = "../solver" }
-clap = { version = "3.2.20", features = ["derive"] }
+clap = { version = "4.0.29", features = ["derive"] }
 itertools = "0.10.3"
 num_cpus = "1.13.1"
 
