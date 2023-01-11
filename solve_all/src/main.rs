@@ -150,13 +150,13 @@ fn create_out_dir(args: &mut Args) -> bool {
 }
 
 fn file_paths(args: &Args, numbers: &[u8]) -> (PathBuf, PathBuf) {
-    let nums_str = numbers.iter().map(|n| format!("{}", n)).join("-");
+    let nums_str = numbers.iter().map(|n| format!("{n}")).join("-");
 
-    let file_name = format!("{}.txt", nums_str);
+    let file_name = format!("{nums_str}.txt");
     let mut file_path = args.out_dir.clone().unwrap();
     file_path.push(file_name);
 
-    let eqn_file_name = format!("{}-eqn.txt", nums_str);
+    let eqn_file_name = format!("{nums_str}-eqn.txt");
     let mut eqn_file_path = args.out_dir.clone().unwrap();
     eqn_file_path.push(eqn_file_name);
 
@@ -196,7 +196,7 @@ fn run_solve_threads(args: &Args, card_combs: Arc<Mutex<VecDeque<Vec<u8>>>>, pro
                     let thread_name = thread.name().unwrap();
 
                     if args.verbose {
-                        println!("Thread {:4<}: Started", thread_name);
+                        println!("Thread {thread_name:4<}: Started");
                     }
 
                     // Get next card selection
@@ -205,14 +205,14 @@ fn run_solve_threads(args: &Args, card_combs: Arc<Mutex<VecDeque<Vec<u8>>>>, pro
 
                         if needs_calculating(args, &file_path, &eqn_file_path) {
                             // Run all equations for this card selection
-                            println!("Thread {:4<}: Calculating {:?}...", thread_name, numbers);
+                            println!("Thread {thread_name:4<}: Calculating {numbers:?}...");
 
                             solve(args, programs, &numbers, &file_path, &eqn_file_path);
                         }
                     }
 
                     if args.verbose {
-                        println!("Thread {:4<}: Finished", thread_name);
+                        println!("Thread {thread_name:4<}: Finished");
                     }
                 })
                 .unwrap();
@@ -265,9 +265,9 @@ fn solve(
     let mut file = File::create(file_path).unwrap();
 
     // Write details to the output file
-    writeln!(&mut file, "solution map: {}", sol_map).unwrap();
-    writeln!(&mut file, "solution coverage: {}", covered).unwrap();
-    writeln!(&mut file, "solution counts: {}", sol_cnt_str).unwrap();
+    writeln!(&mut file, "solution map: {sol_map}").unwrap();
+    writeln!(&mut file, "solution coverage: {covered}").unwrap();
+    writeln!(&mut file, "solution counts: {sol_cnt_str}").unwrap();
     writeln!(&mut file, "results: {}", results.solutions.len()).unwrap();
     writeln!(&mut file, "zero intermediate: {}", results.zero).unwrap();
     writeln!(&mut file, "negative intermediate: {}", results.negative).unwrap();

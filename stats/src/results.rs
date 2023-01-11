@@ -34,7 +34,7 @@ impl Results {
 
         for i in 0..MAX_BIG {
             println!();
-            self.big_stats[i].output(&format!("{} Big Numbers", i));
+            self.big_stats[i].output(&format!("{i} Big Numbers"));
         }
     }
 }

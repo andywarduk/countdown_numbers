@@ -57,8 +57,7 @@ fn main() {
 
                 if args.verbose {
                     println!(
-                        "Filtered out {} duplicate and {} identical solutions",
-                        duplicate, identical
+                        "Filtered out {duplicate} duplicate and {identical} identical solutions"
                     );
                 }
 
@@ -129,7 +128,7 @@ fn print_solutions(args: &Args, programs: &Programs, solutions: &[Solution]) {
                 if num_outputs > 1 {
                     print!("  ");
                 }
-                println!("{}", l);
+                println!("{l}");
             }
         }
     }

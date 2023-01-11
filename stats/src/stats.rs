@@ -84,7 +84,7 @@ impl Stats {
         let mut max_sols = self.sol_count[0];
         let mut max_sol_elems = Vec::new();
 
-        println!("===== {} =====", desc);
+        println!("===== {desc} =====");
         println!("Target, Combinations");
 
         for (i, &n) in self.sol_count.iter().enumerate() {
@@ -116,7 +116,7 @@ impl Stats {
             let mut cumul = 0;
 
             println!();
-            println!("{} Targets Achieved (buckets of {})", desc, size);
+            println!("{desc} Targets Achieved (buckets of {size})");
 
             for (i, n) in buckets.iter().enumerate() {
                 cumul += n;
@@ -139,7 +139,7 @@ impl Stats {
 
         // General statistics section
         println!();
-        println!("{} Statistics", desc);
+        println!("{desc} Statistics");
 
         let elems = min_sol_elems
             .iter()
@@ -185,7 +185,7 @@ impl Stats {
         );
 
         if count <= 5 {
-            println!(", Cards, {:?}", sols);
+            println!(", Cards, {sols:?}");
         } else {
             println!();
         }
@@ -201,7 +201,7 @@ impl Stats {
         );
 
         if count <= 5 {
-            println!(", Cards, {:?}", sols);
+            println!(", Cards, {sols:?}");
         } else {
             println!();
         }

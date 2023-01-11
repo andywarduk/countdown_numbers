@@ -60,7 +60,7 @@ impl InfixGrpTypeElem {
         };
 
         if brackets && !no_brackets {
-            format!("({})", inner)
+            format!("({inner})")
         } else {
             inner
         }
