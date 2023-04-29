@@ -5,7 +5,7 @@
 ### release build
 
 ```sh
-cargo flamegraph --open --bin solve -- 888 100 75 50 25 10 9
+CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --open --bin solve -- 888 100 75 50 25 10 9
 ```
 
 ### debug build
