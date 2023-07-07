@@ -4,6 +4,7 @@ authors = ["Andrew Ward (andy.ward.uk@gmail.com)"]
 
 [workspace]
 members = ["cards", "solver", "solve", "solve_all", "stats", "numformat"]
+resolver = "2"
 
 [profile.release]
 lto = true
