@@ -343,7 +343,6 @@ impl Programs {
 
         for op in instructions {
             match *op & ProgOp::PROG_OP_MASK {
-                ProgOp::PROG_OP_NUM => stack.push(numbers[op.bits() as usize] as u32),
                 ProgOp::PROG_OP_ADD => {
                     let n1 = stack.pop().unwrap();
                     let n2 = stack.pop().unwrap();
@@ -400,7 +399,7 @@ impl Programs {
 
                     stack.push(n2 / n1);
                 }
-                _ => panic!("Unexpected operator type"),
+                _ => stack.push(numbers[op.bits() as usize] as u32),
             }
         }
 

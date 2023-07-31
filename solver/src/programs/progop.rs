@@ -7,10 +7,9 @@ use colored::Colorize;
 use numformat::NumFormat;
 
 bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     /// Program operator type bitmask. Top 3 bits are operator type, low 5 bits used for numbers (0-31)
     pub struct ProgOp: u8 {
-        /// A number element. The number element is in the low 5 bits (0-31)
-        const PROG_OP_NUM = 0b00000000;
         /// Addition operator
         const PROG_OP_ADD = 0b00100000;
         /// Subtraction operator
@@ -28,10 +27,10 @@ impl ProgOp {
     /// Constructs a new number operator
     #[inline]
     pub fn new_number(n: u8) -> ProgOp {
-        let result = ProgOp { bits: n };
+        let result = ProgOp::from_bits_retain(n);
 
         // Check we don't overflow 5 bits
-        debug_assert!(result & ProgOp::PROG_OP_MASK == ProgOp::PROG_OP_NUM);
+        debug_assert!((result & ProgOp::PROG_OP_MASK).is_empty());
 
         result
     }
@@ -39,18 +38,17 @@ impl ProgOp {
     /// Returns true if the operator is a number
     #[inline]
     pub fn is_number(&self) -> bool {
-        *self & ProgOp::PROG_OP_MASK == ProgOp::PROG_OP_NUM
+        (*self & ProgOp::PROG_OP_MASK).is_empty()
     }
 
     /// Returns the string representation of a program operator, optionally coloured
     pub fn colour(&self, numbers: &[u8], colour: bool) -> String {
         let mut res = match *self & ProgOp::PROG_OP_MASK {
-            ProgOp::PROG_OP_NUM => numbers[self.bits as usize].num_format(),
             ProgOp::PROG_OP_ADD => "+".to_string(),
             ProgOp::PROG_OP_SUB => "-".to_string(),
             ProgOp::PROG_OP_MUL => "×".to_string(),
             ProgOp::PROG_OP_DIV => "/".to_string(),
-            _ => panic!("Unexpected operator type"),
+            _ => numbers[self.bits() as usize].num_format(),
         };
 
         if colour {

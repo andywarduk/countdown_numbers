@@ -135,7 +135,7 @@ fn print_solutions(args: &Args, programs: &Programs, solutions: &[Solution]) {
 }
 
 bitflags! {
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     struct Output: u8 {
         const INFIX = 0b00000001;
         const FULLINFIX = 0b00000010;
