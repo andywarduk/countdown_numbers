@@ -2,3 +2,4 @@
 solutions*
 flamegraph.svg
 perf.data*
+.DS_Store
