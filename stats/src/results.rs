@@ -25,16 +25,16 @@ impl Results {
         println!();
         println!("Big Number Average Achieved");
 
-        for i in 0..MAX_BIG {
-            let files = self.big_stats[i].files;
-            let avg = average(self.big_stats[i].tot_sols, self.big_stats[i].files);
+        for (i, stats) in self.big_stats.iter().enumerate() {
+            let files = stats.files;
+            let avg = average(stats.tot_sols, stats.files);
 
             println!("{}, {}, {:.2}, {}", i, files, avg, percent(avg, 900));
         }
 
-        for i in 0..MAX_BIG {
+        for (i, stats) in self.big_stats.iter().enumerate() {
             println!();
-            self.big_stats[i].output(&format!("{i} Big Numbers"));
+            stats.output(&format!("{i} Big Numbers"));
         }
     }
 }

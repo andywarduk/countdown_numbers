@@ -12,9 +12,9 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 
 use colored::Colorize;
-use duplicates::{duplicated, DupReason};
+use duplicates::{DupReason, duplicated};
 use generate::{calc_num_programs, generate_num_programs, op_combs, op_counts};
-use infix::{infix_group, InfixGrpTypeElem};
+use infix::{InfixGrpTypeElem, infix_group};
 use itertools::Itertools;
 use numformat::NumFormat;
 use progop::ProgOp;
@@ -215,10 +215,10 @@ impl Programs {
         for (i, program) in self.programs.iter().enumerate() {
             let instructions = self.instructions_for_program(program);
 
-            if let Ok(ans) = Self::run_instructions(instructions, numbers, &mut stack) {
-                if ans == target {
-                    solutions.push(Solution::new(i, instructions.len(), ans));
-                }
+            if let Ok(ans) = Self::run_instructions(instructions, numbers, &mut stack)
+                && ans == target
+            {
+                solutions.push(Solution::new(i, instructions.len(), ans));
             }
         }
 

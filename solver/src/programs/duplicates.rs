@@ -15,7 +15,7 @@
 
 use std::collections::HashSet;
 
-use super::infix::{infix_group_cb_stack, InfixGrpTypeElem};
+use super::infix::{InfixGrpTypeElem, infix_group_cb_stack};
 use super::progop::ProgOp;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -90,8 +90,8 @@ mod tests {
     use itertools::Itertools;
 
     use super::*;
-    use crate::programs::infix::{infix_group, infix_group_cb};
     use crate::programs::Programs;
+    use crate::programs::infix::{infix_group, infix_group_cb};
 
     fn test_int(
         rpn: &str,

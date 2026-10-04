@@ -4,8 +4,8 @@
 //! For a given RPN program a tree of elements is returned describing the grouping of
 //! operations.
 
-use super::progop::ProgOp;
 use super::Programs;
+use super::progop::ProgOp;
 
 /// Operator type simplification equation element
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -153,16 +153,16 @@ where
     };
 
     let build_term = |t1, op, t2, grp_cb: &mut F| -> Option<InfixGrpTypeElem> {
-        if let InfixGrpTypeElem::Group(grp1) = &t1 {
-            if !grp_cb(grp1) {
-                None?
-            }
+        if let InfixGrpTypeElem::Group(grp1) = &t1
+            && !grp_cb(grp1)
+        {
+            None?
         }
 
-        if let InfixGrpTypeElem::Group(grp2) = &t2 {
-            if !grp_cb(grp2) {
-                None?
-            }
+        if let InfixGrpTypeElem::Group(grp2) = &t2
+            && !grp_cb(grp2)
+        {
+            None?
         }
 
         Some(InfixGrpTypeElem::Term(Box::new(t1), op, Box::new(t2)))
@@ -181,10 +181,10 @@ where
         },
     )?;
 
-    if let InfixGrpTypeElem::Group(grp) = &outer_term {
-        if !grp_cb(grp) {
-            None?
-        }
+    if let InfixGrpTypeElem::Group(grp) = &outer_term
+        && !grp_cb(grp)
+    {
+        None?
     }
 
     Some(outer_term)

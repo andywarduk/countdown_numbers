@@ -41,10 +41,10 @@ fn process_dir(results: &mut Results, dir: &PathBuf) -> i32 {
     match fs::read_dir(dir) {
         Ok(files) => {
             for f in files.flatten() {
-                if let Some(details) = result_file_details(f) {
-                    if let Err(e) = process_file(results, &details) {
-                        eprintln!("Failed to process {} ({})", details.path.display(), e);
-                    }
+                if let Some(details) = result_file_details(f)
+                    && let Err(e) = process_file(results, &details)
+                {
+                    eprintln!("Failed to process {} ({})", details.path.display(), e);
                 }
             }
 
@@ -128,7 +128,7 @@ fn process_file(results: &mut Results, details: &FileDetails) -> Result<(), Box<
                     c,
                     details.path.display()
                 )
-                .into())
+                .into());
             }
         }
     }

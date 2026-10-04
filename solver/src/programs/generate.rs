@@ -14,9 +14,9 @@
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 
-use super::duplicates::{duplicated, DupReason};
-use super::progop::ProgOp;
 use super::ProgInstr;
+use super::duplicates::{DupReason, duplicated};
+use super::progop::ProgOp;
 
 /// Calculates the number of programs that will be generated for a given number of numbers.
 /// When duplicates are filtered out an estimate is returned
