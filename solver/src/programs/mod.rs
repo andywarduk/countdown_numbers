@@ -393,7 +393,7 @@ impl Programs {
                         Err(ProgErr::Div1)?
                     }
 
-                    if n2 % n1 != 0 {
+                    if !n2.is_multiple_of(n1) {
                         Err(ProgErr::NonInteger)?
                     }
 

@@ -1,5 +1,0 @@
-unstable_features = true
-max_width = 100
-imports_layout = "HorizontalVertical"
-group_imports = "StdExternalCrate"
-imports_granularity = "Module"

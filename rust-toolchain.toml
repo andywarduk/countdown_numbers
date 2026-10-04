@@ -1,0 +1,7 @@
+# Pin this workspace to the stable Rust toolchain and ensure common components/targets are available.
+# Using the TOML form so IDEs and rustup will auto-install what is needed for contributors/CI.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"

@@ -1,6 +1,15 @@
 [workspace.package]
-edition = "2021"
+version = "0.1.0"
+description = "A Countdown numbers game solver written in Rust."
 authors = ["Andrew Ward (andy.ward.uk@gmail.com)"]
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/andywarduk/countdown_numbers"
+homepage = "https://github.com/andywarduk/countdown_numbers"
+edition = "2021"
+keywords = ["countdown", "solver", "game", "search"]
+categories = ["algorithms"]
+publish = false
 
 [workspace]
 members = ["cards", "solver", "solve", "solve_all", "stats"]

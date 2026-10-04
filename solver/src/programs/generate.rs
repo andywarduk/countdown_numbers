@@ -23,7 +23,7 @@ use super::ProgInstr;
 pub(crate) fn calc_num_programs(
     nums: u8,
     inc_duplicated: bool,
-    num_perms: &Vec<Vec<u8>>,
+    num_perms: &[Vec<u8>],
     op_map: &HashMap<u8, (OpCounts, OpCombs)>,
 ) -> usize {
     let mut total = 0;
